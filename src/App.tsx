@@ -7,7 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import StudentDashboard from './pages/student/Dashboard';
 import AdminDashboard from './pages/admin/Dashboard';
-import AddExam from './pages/admin/AddExam';
+// import AddExam from './pages/admin/AddExam';
 import Exams from './pages/Exams';
 import Questions from './pages/Questions';
 import Results from './pages/Results';
@@ -15,17 +15,17 @@ import History from './pages/History';
 import ActiveStudents from './pages/ActiveStudents';
 import ExamInterface from './pages/ExamInterface';
 import NotFound from './pages/NotFound';
-import
 
-function App() {
+const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
         <Router>
           <Routes>
+            {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            
+
             {/* Student Routes */}
             <Route path="/student" element={<ProtectedRoute role="student" />}>
               <Route path="dashboard" element={<StudentDashboard />} />
@@ -35,12 +35,11 @@ function App() {
               <Route path="history" element={<History />} />
               <Route index element={<Navigate to="/student/dashboard" replace />} />
             </Route>
-            
+
             {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute role="admin" />}>
-            <Route path="/admin/login" element={<Login />} />
               <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="add-exam" element={<AddExam />} />
+              {/* <Route path="add-exam" element={<AddExam />} /> */}
               <Route path="exams" element={<Exams />} />
               <Route path="active-students" element={<ActiveStudents />} />
               <Route path="questions" element={<Questions />} />
@@ -48,7 +47,8 @@ function App() {
               <Route path="history" element={<History />} />
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
             </Route>
-            
+
+            {/* Default and Fallback Routes */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -56,7 +56,6 @@ function App() {
       </AuthProvider>
     </ThemeProvider>
   );
-}
+};
 
 export default App;
-
