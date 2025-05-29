@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cyan-glow: 0 0 15px rgba(92, 255, 201, 0.6); /* Derived from primary: #5cffc9 */
+  --secondary-glow: 0 0 15px rgba(0, 172, 118, 0.5); /* Derived from secondary: #00ac76 */
+}
+
+body {
+  @apply bg-darkbg text-primary font-poppins;
+}
+
+/* Glass effect */
+.glass-effect {
+  @apply bg-darkbg/60 backdrop-blur-sm border border-primary/20;
+}
+
+.glass-effect-hover:hover {
+  @apply border-primary/40 shadow-lg;
+  box-shadow: var(--cyan-glow);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-darkbg;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-secondary/50 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary;
+}
+
+/* Glow effects */
+.cyan-glow {
+  text-shadow: var(--cyan-glow);
+}
+
+.secondary-glow {
+  text-shadow: var(--secondary-glow);
+}
+
+.btn-glow:hover {
+  box-shadow: var(--cyan-glow);
+}
+
+/* Animations */
+.pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Line clamp */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
