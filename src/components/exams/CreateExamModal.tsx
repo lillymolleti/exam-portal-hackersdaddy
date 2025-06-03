@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, HelpCircle, Save, FileUp } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 interface CreateExamModalProps {
   onClose: () => void;
 }
 
 const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
+  const { isDark } = useTheme();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -13,31 +17,115 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
   const [totalQuestions, setTotalQuestions] = useState('10');
   const [description, setDescription] = useState('');
   const [passingScore, setPassingScore] = useState('60');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  console.log('CreateExamModal: Rendering component with isDark:', isDark);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
+    setError(null);
+    setLoading(true);
+    console.log('CreateExamModal: Form submitted with data:', {
+      title,
+      date,
+      startTime,
+      duration,
+      totalQuestions,
+      description,
+      passingScore,
+    });
+
+    try {
+      // Validate required fields
+      if (!title || !date || !startTime || !duration || !totalQuestions || !passingScore) {
+        throw new Error('All required fields must be filled');
+      }
+
+      const durationNum = parseInt(duration);
+      const totalQuestionsNum = parseInt(totalQuestions);
+      const passingScoreNum = parseInt(passingScore);
+
+      // Validate numeric fields
+      if (isNaN(durationNum) || durationNum < 10 || durationNum > 240) {
+        throw new Error('Duration must be between 10 and 240 minutes');
+      }
+      if (isNaN(totalQuestionsNum) || totalQuestionsNum < 1 || totalQuestionsNum > 100) {
+        throw new Error('Total questions must be between 1 and 100');
+      }
+      if (isNaN(passingScoreNum) || passingScoreNum < 1 || passingScoreNum > 100) {
+        throw new Error('Passing score must be between 1 and 100');
+      }
+
+      // Combine date and start time into ISO string
+      const examDateTime = new Date(`${date}T${startTime}`).toISOString();
+      console.log('CreateExamModal: Combined exam date and time:', examDateTime);
+
+      // Save to Firestore
+      const docRef = await addDoc(collection(db, 'exams'), {
+        title,
+        date: examDateTime,
+        duration: durationNum,
+        totalQuestions: totalQuestionsNum,
+        description: description || null,
+        passingScore: passingScoreNum,
+      });
+      console.log('CreateExamModal: Exam created successfully with ID:', docRef.id);
+
+      setLoading(false);
+      onClose();
+    } catch (err: any) {
+      console.error('CreateExamModal: Error creating exam:', err.message, 'Code:', err.code);
+      setError(err.message || 'Failed to create exam');
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log('CreateExamModal: File selected for import:', file.name);
+      alert('File upload functionality is not fully implemented in this demo. Selected file: ' + file.name);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-['Poppins']">
-      <div className="bg-[#121212] rounded-xl border border-[#5cffc9]/40 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-6 border-b border-[#5cffc9]/30">
-          <h2 className="text-xl font-semibold text-white font-['Glacial Indifference']">Create New Exam</h2>
-          <button onClick={onClose} className="text-[#5cffc9] hover:text-white">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins">
+      <div
+        className={`bg-darkbg rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto ${
+          isDark ? 'border-primary/40' : 'border-gray-300'
+        }`}
+      >
+        <div className="flex justify-between items-center p-6 border-b border-primary/30">
+          <h2 className="text-xl font-semibold font-glacial text-primary">Create New Exam</h2>
+          <button onClick={() => {
+            console.log('CreateExamModal: Close button clicked');
+            onClose();
+          }} className="text-primary hover:text-secondary">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 text-white space-y-6">
+        <form onSubmit={handleSubmit} className={`p-6 space-y-6 ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
+          {error && (
+            <div className="bg-red-900/40 text-red-300 p-3 rounded-md text-sm">
+              {error}
+            </div>
+          )}
+
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-[#5cffc9]">Exam Title</label>
+            <label htmlFor="title" className="block text-sm font-medium text-primary">Exam Title</label>
             <input
               type="text"
               id="title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 w-full rounded-lg bg-[#1f1f1f] text-white placeholder-gray-500 border border-[#00ac76]/50 focus:ring-2 focus:ring-[#5cffc9] focus:outline-none px-4 py-2"
+              onChange={(e) => {
+                console.log('CreateExamModal: Title updated:', e.target.value);
+                setTitle(e.target.value);
+              }}
+              className={`mt-1 w-full rounded-lg text-dark-text placeholder-gray-500 border focus:ring-2 focus:ring-primary focus:outline-none px-4 py-2 ${
+                isDark ? 'bg-[#1f1f1f] border-secondary/50' : 'bg-light-bg border-gray-300'
+              }`}
               placeholder="Enter exam title"
               required
             />
@@ -46,17 +134,22 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date */}
             <div>
-              <label htmlFor="date" className="block text-sm font-medium text-[#5cffc9]">Exam Date</label>
+              <label htmlFor="date" className="block text-sm font-medium text-primary">Exam Date</label>
               <div className="relative mt-1">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Calendar className="h-5 w-5 text-[#5cffc9]/70" />
+                  <Calendar className="h-5 w-5 text-primary/70" />
                 </div>
                 <input
                   type="date"
                   id="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-[#00ac76]/40 rounded-lg bg-[#1f1f1f] text-white focus:outline-none focus:ring-2 focus:ring-[#5cffc9]"
+                  onChange={(e) => {
+                    console.log('CreateExamModal: Date updated:', e.target.value);
+                    setDate(e.target.value);
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  }`}
                   required
                 />
               </div>
@@ -64,17 +157,22 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
 
             {/* Start Time */}
             <div>
-              <label htmlFor="startTime" className="block text-sm font-medium text-[#5cffc9]">Start Time</label>
+              <label htmlFor="startTime" className="block text-sm font-medium text-primary">Start Time</label>
               <div className="relative mt-1">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Clock className="h-5 w-5 text-[#5cffc9]/70" />
+                  <Clock className="h-5 w-5 text-primary/70" />
                 </div>
                 <input
                   type="time"
                   id="startTime"
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-[#00ac76]/40 rounded-lg bg-[#1f1f1f] text-white focus:outline-none focus:ring-2 focus:ring-[#5cffc9]"
+                  onChange={(e) => {
+                    console.log('CreateExamModal: StartTime updated:', e.target.value);
+                    setStartTime(e.target.value);
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  }`}
                   required
                 />
               </div>
@@ -84,10 +182,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Duration */}
             <div>
-              <label htmlFor="duration" className="block text-sm font-medium text-[#5cffc9]">Duration (minutes)</label>
+              <label htmlFor="duration" className="block text-sm font-medium text-primary">Duration (minutes)</label>
               <div className="relative mt-1">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Clock className="h-5 w-5 text-[#5cffc9]/70" />
+                  <Clock className="h-5 w-5 text-primary/70" />
                 </div>
                 <input
                   type="number"
@@ -95,8 +193,13 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                   min="10"
                   max="240"
                   value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-[#00ac76]/40 rounded-lg bg-[#1f1f1f] text-white focus:outline-none focus:ring-2 focus:ring-[#5cffc9]"
+                  onChange={(e) => {
+                    console.log('CreateExamModal: Duration updated:', e.target.value);
+                    setDuration(e.target.value);
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  }`}
                   required
                 />
               </div>
@@ -104,10 +207,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
 
             {/* Questions */}
             <div>
-              <label htmlFor="totalQuestions" className="block text-sm font-medium text-[#5cffc9]">Questions Per Student</label>
+              <label htmlFor="totalQuestions" className="block text-sm font-medium text-primary">Questions Per Student</label>
               <div className="relative mt-1">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HelpCircle className="h-5 w-5 text-[#5cffc9]/70" />
+                  <HelpCircle className="h-5 w-5 text-primary/70" />
                 </div>
                 <input
                   type="number"
@@ -115,8 +218,13 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                   min="1"
                   max="100"
                   value={totalQuestions}
-                  onChange={(e) => setTotalQuestions(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-[#00ac76]/40 rounded-lg bg-[#1f1f1f] text-white focus:outline-none focus:ring-2 focus:ring-[#5cffc9]"
+                  onChange={(e) => {
+                    console.log('CreateExamModal: TotalQuestions updated:', e.target.value);
+                    setTotalQuestions(e.target.value);
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  }`}
                   required
                 />
               </div>
@@ -124,15 +232,20 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
 
             {/* Passing Score */}
             <div>
-              <label htmlFor="passingScore" className="block text-sm font-medium text-[#5cffc9]">Passing Score (%)</label>
+              <label htmlFor="passingScore" className="block text-sm font-medium text-primary">Passing Score (%)</label>
               <input
                 type="number"
                 id="passingScore"
                 min="1"
                 max="100"
                 value={passingScore}
-                onChange={(e) => setPassingScore(e.target.value)}
-                className="mt-1 w-full rounded-lg bg-[#1f1f1f] text-white border border-[#00ac76]/40 focus:ring-2 focus:ring-[#5cffc9] px-4 py-2 focus:outline-none"
+                onChange={(e) => {
+                  console.log('CreateExamModal: PassingScore updated:', e.target.value);
+                  setPassingScore(e.target.value);
+                }}
+                className={`mt-1 w-full rounded-lg text-dark-text border focus:ring-2 focus:ring-primary px-4 py-2 focus:outline-none ${
+                  isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                }`}
                 required
               />
             </div>
@@ -140,29 +253,34 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
 
           {/* Description */}
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-[#5cffc9]">Description (Optional)</label>
+            <label htmlFor="description" className="block text-sm font-medium text-primary">Description (Optional)</label>
             <textarea
               id="description"
               rows={3}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="mt-1 w-full rounded-lg bg-[#1f1f1f] text-white border border-[#00ac76]/40 focus:ring-2 focus:ring-[#5cffc9] px-4 py-2 placeholder-gray-400 focus:outline-none"
+              onChange={(e) => {
+                console.log('CreateExamModal: Description updated:', e.target.value);
+                setDescription(e.target.value);
+              }}
+              className={`mt-1 w-full rounded-lg text-dark-text border focus:ring-2 focus:ring-primary px-4 py-2 placeholder-gray-400 focus:outline-none ${
+                isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+              }`}
               placeholder="Enter exam description"
             />
           </div>
 
           {/* Import Questions */}
-          <div className="bg-[#00ac76]/10 border border-[#00ac76]/30 rounded-lg p-4">
-            <h3 className="font-medium text-[#5cffc9] flex items-center">
+          <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-4">
+            <h3 className="font-medium text-primary flex items-center">
               <FileUp className="h-5 w-5 mr-2" />
               Question Import
             </h3>
-            <p className="mt-2 text-sm text-white/80">
+            <p className="mt-2 text-sm text-dark-text/80">
               Import questions from an Excel file (columns for question, options, answer).
             </p>
             <div className="mt-3">
-              <label className="block w-full px-4 py-2 bg-[#5cffc9] text-[#121212] hover:bg-[#4ce9b3] rounded-lg text-sm font-medium text-center cursor-pointer transition-colors">
-                <input type="file" className="hidden" accept=".xlsx,.xls,.csv" />
+              <label className="block w-full px-4 py-2 bg-primary text-darkbg hover:bg-primary/80 rounded-lg text-sm font-medium text-center cursor-pointer transition-colors">
+                <input type="file" className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} />
                 Select Excel File
               </label>
             </div>
@@ -172,17 +290,27 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
           <div className="mt-8 flex justify-end space-x-3">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-[#1f1f1f] hover:bg-[#2a2a2a] text-white rounded-lg text-sm font-medium"
+              onClick={() => {
+                console.log('CreateExamModal: Cancel button clicked');
+                onClose();
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                isDark ? 'bg-[#1f1f1f] hover:bg-[#2a2a2a] text-dark-text' : 'bg-gray-200 hover:bg-gray-300 text-light-text'
+              }`}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-gradient-to-r from-[#5cffc9] to-[#00ac76] hover:from-[#4ce9b3] hover:to-[#00b87a] text-[#121212] rounded-lg text-sm font-semibold flex items-center transition-all"
+              disabled={loading}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center transition-all ${
+                loading
+                  ? 'bg-gray-500 cursor-not-allowed text-gray-300'
+                  : 'bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-darkbg'
+              }`}
             >
               <Save className="h-4 w-4 mr-2" />
-              Create Exam
+              {loading ? 'Creating...' : 'Create Exam'}
             </button>
           </div>
         </form>

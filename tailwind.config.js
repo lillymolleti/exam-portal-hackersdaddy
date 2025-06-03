@@ -1,7 +1,10 @@
+
 /** @type {import('tailwindcss').Config} */
-export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  darkMode: 'class', // Added to enable class-based dark mode
+module.exports = {
+  darkMode: 'class', // Enable dark mode using the 'dark' class
+  content: [
+    './src/**/*.{js,jsx,ts,tsx}',
+  ],
   theme: {
     extend: {
       fontFamily: {
@@ -9,9 +12,12 @@ export default {
         glacial: ['"Glacial Indifference"', 'sans-serif'],
       },
       colors: {
-        primary: '#5cffc9',
-        secondary: '#00ac76',
-        darkbg: '#121212',
+        darkbg: '#121212', // Default dark background
+        primary: '#5cffc9', // Primary color
+        secondary: '#00ac76', // Secondary color
+        // Add light mode colors if needed
+        'light-bg': '#ffffff',
+        'light-text': '#000000',
       },
     },
   },

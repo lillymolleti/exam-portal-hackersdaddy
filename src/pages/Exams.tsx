@@ -1,38 +1,103 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, FileUp, Filter, Search } from 'lucide-react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 import ExamCard from '../components/exams/ExamCard';
 import CreateExamModal from '../components/exams/CreateExamModal';
 
-// Mock data for exams
-const mockExams = [
-  { id: '1', title: 'Web Development Fundamentals', date: '2025-08-15', duration: 60, totalQuestions: 10 },
-  { id: '2', title: 'Data Structures and Algorithms', date: '2025-08-18', duration: 90, totalQuestions: 10 },
-  { id: '3', title: 'JavaScript Programming', date: '2025-08-12', duration: 120, totalQuestions: 10 },
-  { id: '4', title: 'Database Systems', date: '2025-08-01', duration: 75, totalQuestions: 10 },
-  { id: '5', title: 'Computer Networks', date: '2025-07-25', duration: 60, totalQuestions: 10 },
-  { id: '6', title: 'Operating Systems', date: '2025-08-20', duration: 90, totalQuestions: 10 },
-];
+interface Exam {
+  id: string;
+  title: string;
+  date: string; // ISO string
+  duration: number;
+  totalQuestions: number;
+  description?: string;
+  passingScore?: number;
+}
 
 const Exams: React.FC = () => {
   const { user } = useAuth();
   const role = user?.role || 'student';
   const isAdmin = role === 'admin';
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  
-  const filteredExams = mockExams.filter(exam => {
+
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>(''); // Added back setSearchTerm
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  console.log('Exams: Rendering component with user:', user?.name, 'role:', role, 'isAdmin:', isAdmin);
+
+  useEffect(() => {
+    console.log('Exams: useEffect triggered for fetching exams');
+    if (!user) {
+      console.log('Exams: No user authenticated, aborting fetch');
+      setLoading(false);
+      return;
+    }
+
+    const fetchExams = async () => {
+      setLoading(true);
+      console.log('Exams: Fetching exams for user:', user.name, 'role:', role);
+      console.log('Exams: Initial loading state set to true');
+      console.log('Exams: Fetching exams from Firestore');
+      try {
+        const examsSnapshot = await getDocs(collection(db, 'exams'));
+        console.log('Exams: Raw snapshot size:', examsSnapshot.size);
+        const examsData = examsSnapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            console.log('Exams: Exam document:', doc.id, data);
+            const examDate = new Date(data.date);
+            if (isNaN(examDate.getTime())) {
+              console.warn('Exams: Invalid date for exam:', doc.id, 'date:', data.date);
+              return null; // Skip exams with invalid dates
+            }
+            return {
+              id: doc.id,
+              title: data.title,
+              date: data.date,
+              duration: data.duration,
+              totalQuestions: data.totalQuestions,
+              description: data.description,
+              passingScore: data.passingScore,
+            } as Exam;
+          })
+          .filter((exam): exam is Exam => exam !== null); // Filter out null entries
+        setExams(examsData);
+        console.log('Exams: Fetched and set exams:', examsData);
+      } catch (error: any) {
+        console.error('Exams: Error fetching exams:', error.message, 'Code:', error.code);
+      } finally {
+        setLoading(false);
+        console.log('Exams: Loading state set to false');
+      }
+    };
+    fetchExams();
+  }, [user]);
+
+  const filteredExams = exams.filter((exam) => {
+    console.log('Exams: Filtering exam:', exam.id, 'title:', exam.title, 'date:', exam.date);
     const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const isUpcoming = new Date(exam.date) > new Date();
-    
+    const examDate = new Date(exam.date);
+    const isUpcoming = !isNaN(examDate.getTime()) && examDate > new Date();
+    console.log('Exams: Exam filter - matchesSearch:', matchesSearch, 'isUpcoming:', isUpcoming, 'filterStatus:', filterStatus);
+
     if (filterStatus === 'all') return matchesSearch;
     if (filterStatus === 'upcoming') return matchesSearch && isUpcoming;
     if (filterStatus === 'past') return matchesSearch && !isUpcoming;
-    
+
     return matchesSearch;
   });
+  console.log('Exams: Filtered exams:', filteredExams);
+
+  if (loading) {
+    console.log('Exams: Rendering loading state');
+    return <div className="p-6 text-center bg-darkbg text-white">Loading exams...</div>;
+  }
+
+  console.log('Exams: Rendering main content, filteredExams length:', filteredExams.length);
 
   return (
     <div className="space-y-6">
@@ -40,22 +105,29 @@ const Exams: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-white">Exams</h1>
           <p className="text-gray-400 mt-1">
-            {isAdmin 
-              ? 'Manage and create exams for your students' 
-              : 'View and take your scheduled exams'}
+            {isAdmin ? 'Manage and create exams for your students' : 'View and take your scheduled exams'}
           </p>
         </div>
-        
+
         {isAdmin && (
           <div className="mt-4 md:mt-0 flex space-x-3">
             <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2 bg-gradient-to-r from-[#5cffc9] to-[#00ac76] hover:from-[#4be3b0] hover:to-[#008f5f] text-white rounded-lg text-sm font-medium flex items-center transition-all"
+              onClick={() => {
+                console.log('Exams: Opening CreateExamModal');
+                setIsCreateModalOpen(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-white rounded-lg text-sm font-medium flex items-center transition-all"
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Exam
             </button>
-            <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium flex items-center transition-colors">
+            <button
+              onClick={() => {
+                console.log('Exams: Opening CreateExamModal for import');
+                setIsCreateModalOpen(true);
+              }}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium flex items-center transition-colors"
+            >
               <FileUp className="h-4 w-4 mr-2" />
               Import from Excel
             </button>
@@ -73,19 +145,25 @@ const Exams: React.FC = () => {
             type="text"
             placeholder="Search exams..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-700 rounded-lg bg-[#121212] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5cffc9] focus:border-transparent"
+            onChange={(e) => {
+              console.log('Exams: Search term updated:', e.target.value);
+              setSearchTerm(e.target.value);
+            }}
+            className="block w-full pl-10 pr-3 py-2 border border-gray-700 rounded-lg bg-darkbg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
-        
+
         <div className="relative w-full md:w-48">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Filter className="h-5 w-5 text-gray-400" />
           </div>
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-700 rounded-lg bg-[#121212] text-white focus:outline-none focus:ring-2 focus:ring-[#5cffc9] focus:border-transparent appearance-none"
+            onChange={(e) => {
+              console.log('Exams: Filter status updated:', e.target.value);
+              setFilterStatus(e.target.value);
+            }}
+            className="block w-full pl-10 pr-3 py-2 border border-gray-700 rounded-lg bg-darkbg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
           >
             <option value="all">All Exams</option>
             <option value="upcoming">Upcoming</option>
@@ -101,27 +179,29 @@ const Exams: React.FC = () => {
 
       {/* Exams grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredExams.map((exam) => (
-          <ExamCard key={exam.id} exam={exam} role={role as 'admin' | 'student'} />
-        ))}
+        {filteredExams.map((exam) => {
+          console.log('Exams: Rendering ExamCard for exam:', exam.id);
+          return <ExamCard key={exam.id} exam={exam} role={role as 'admin' | 'student'} />;
+        })}
       </div>
-      
+
       {filteredExams.length === 0 && (
         <div className="text-center py-12">
-          <div className="bg-[#121212] rounded-xl border border-gray-700 p-8 mx-auto max-w-md backdrop-blur-sm">
+          <div className="bg-darkbg rounded-xl border border-gray-700 p-8 mx-auto max-w-md backdrop-blur-sm">
             <div className="mx-auto h-16 w-16 rounded-full bg-gray-700 flex items-center justify-center mb-4">
               <FileUp className="h-8 w-8 text-gray-400" />
             </div>
             <h3 className="text-lg font-medium text-white">No exams found</h3>
             <p className="text-gray-400 mt-2">
-              {isAdmin
-                ? 'Create a new exam or adjust your search filters'
-                : 'No exams match your current filters'}
+              {isAdmin ? 'Create a new exam or adjust your search filters' : 'No exams match your current filters'}
             </p>
             {isAdmin && (
               <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="mt-4 px-4 py-2 bg-gradient-to-r from-[#5cffc9] to-[#00ac76] hover:from-[#4be3b0] hover:to-[#008f5f] text-white rounded-lg text-sm font-medium"
+                onClick={() => {
+                  console.log('Exams: Opening CreateExamModal from no exams message');
+                  setIsCreateModalOpen(true);
+                }}
+                className="mt-4 px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-white rounded-lg text-sm font-medium"
               >
                 Create Exam
               </button>
@@ -129,10 +209,15 @@ const Exams: React.FC = () => {
           </div>
         </div>
       )}
-      
-      {/* Create Exam Modal */}
+
       {isCreateModalOpen && (
-        <CreateExamModal onClose={() => setIsCreateModalOpen(false)} />
+        <>
+          {console.log('Exams: Rendering CreateExamModal')}
+          <CreateExamModal onClose={() => {
+            console.log('Exams: Closing CreateExamModal');
+            setIsCreateModalOpen(false);
+          }} />
+        </>
       )}
     </div>
   );

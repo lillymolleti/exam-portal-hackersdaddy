@@ -1,22 +1,95 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { auth, db, doc, getDoc } from '../firebase';
+import { onAuthStateChanged, User as FirebaseUser, signOut, signInWithEmailAndPassword } from 'firebase/auth';
 
 interface User {
-  id: string;
+  firebaseUser: FirebaseUser;
   name: string;
-  email: string;
   role: 'admin' | 'student';
+  email: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, role: 'admin' | 'student') => Promise<void>;
-  logout: () => void;
   isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userData = userDoc.exists() ? userDoc.data() : {};
+          const newUser: User = {
+            firebaseUser,
+            name: userData.name || firebaseUser.email || 'Unknown User',
+            email: firebaseUser.email || 'No email',
+            role: (userData.role as 'admin' | 'student') || 'student',
+          };
+          setUser(newUser);
+          console.log('AuthContext: User loaded:', {
+            uid: firebaseUser.uid,
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role,
+          });
+        } catch (error) {
+          console.error('AuthContext: Error fetching user data:', error);
+          const newUser: User = {
+            firebaseUser,
+            name: firebaseUser.email || 'Unknown User',
+            email: firebaseUser.email || 'No email',
+            role: 'student',
+          };
+          setUser(newUser);
+        }
+      } else {
+        setUser(null);
+        console.log('AuthContext: No user signed in');
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      console.log('AuthContext: Login successful for email:', email);
+    } catch (error: any) {
+      console.error('AuthContext: Login error:', error.code, error.message);
+      throw error; // Let the caller handle the error
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      console.log('AuthContext: User signed out successfully');
+      setUser(null);
+    } catch (error) {
+      console.error('AuthContext: Error signing out:', error);
+    }
+  };
+
+  const isAuthenticated = user !== null;
+
+  return (
+    <AuthContext.Provider value={{ user, loading, isAuthenticated, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -24,84 +97,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Check if user is stored in localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    // In a real app, this would make an API call
-    setLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo purposes, determine role based on email
-      const role = email.includes('admin') ? 'admin' : 'student';
-      
-      const newUser = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: email.split('@')[0],
-        email,
-        role,
-      };
-      
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const register = async (name: string, email: string, password: string, role: 'admin' | 'student') => {
-    setLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newUser = {
-        id: Math.random().toString(36).substr(2, 9),
-        name,
-        email,
-        role,
-      };
-      
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
-    } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-  };
-
-  const value = {
-    user,
-    loading,
-    login,
-    register,
-    logout,
-    isAuthenticated: !!user,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
