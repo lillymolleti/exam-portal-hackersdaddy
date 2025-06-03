@@ -1,9 +1,10 @@
+// src/App.tsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/routes/ProtectedRoute';
-import Layout from './components/layout/Layout'; // Import Layout
+import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -17,12 +18,19 @@ import History from './pages/History';
 const App: React.FC = () => {
   const { isAuthenticated, loading, user } = useAuth();
 
-  console.log('App: Rendering with isAuthenticated:', isAuthenticated, 'loading:', loading, 'user.role:', user?.role);
+  console.log(
+    'App: Rendering with isAuthenticated:',
+    isAuthenticated,
+    'loading:',
+    loading,
+    'user.role:',
+    user?.role
+  );
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-darkbg">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary" />
       </div>
     );
   }
@@ -30,26 +38,35 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <Routes>
-        {/* Login Route - No Layout */}
+        {/* public routes */}
         <Route
           path="/login"
           element={
-            isAuthenticated && user?.role ? <Navigate to={`/${user.role}/dashboard`} replace /> : <Login />
+            isAuthenticated && user?.role ? (
+              <Navigate to={`/${user.role}/dashboard`} replace />
+            ) : (
+              <Login />
+            )
           }
         />
-
-        {/* Register Route - No Layout */}
         <Route
           path="/register"
           element={
-            isAuthenticated && user?.role ? <Navigate to={`/${user.role}/dashboard`} replace /> : <Register />
+            isAuthenticated && user?.role ? (
+              <Navigate to={`/${user.role}/dashboard`} replace />
+            ) : (
+              <Register />
+            )
           }
         />
 
-        {/* Student Routes - With Layout */}
+        {/* student-protected routes */}
         <Route path="/student" element={<ProtectedRoute role="student" />}>
-          <Route element={<Layout />}>
-            <Route path="dashboard" element={<StudentDashboard />} />
+          <Route element={<Layout role="student" />}>
+            <Route
+              path="dashboard"
+              element={<StudentDashboard />}
+            />
             <Route path="exams" element={<Exams />} />
             <Route path="results" element={<Results />} />
             <Route path="history" element={<History />} />
@@ -57,29 +74,37 @@ const App: React.FC = () => {
           </Route>
         </Route>
 
-        {/* Admin Routes - With Layout */}
+        {/* admin-protected routes */}
         <Route path="/admin" element={<ProtectedRoute role="admin" />}>
-          <Route element={<Layout />}>
-            <Route path="dashboard" element={<AdminDashboard />} />
+          <Route element={<Layout role="admin" />}>
+            <Route
+              path="dashboard"
+              element={<AdminDashboard />}
+            />
             <Route path="exams" element={<Exams />} />
             <Route path="questions" element={<Questions />} />
-            <Route path="active-students" element={<ActiveStudents />} />
+            <Route
+              path="active-students"
+              element={<ActiveStudents />}
+            />
             <Route path="results" element={<Results />} />
             <Route path="history" element={<History />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
         </Route>
 
-        {/* Default Route */}
+        {/* root & fallback */}
         <Route
           path="/"
           element={
-            isAuthenticated && user?.role ? <Navigate to={`/${user.role}/dashboard`} replace /> : <Navigate to="/login" replace />
+            isAuthenticated && user?.role ? (
+              <Navigate to={`/${user.role}/dashboard`} replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
-
-        {/* Fallback Route */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ThemeProvider>
   );
