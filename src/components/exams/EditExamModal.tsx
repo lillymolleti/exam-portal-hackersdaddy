@@ -1,42 +1,52 @@
-import React, { useState } from 'react';
-import { X, Calendar, Clock, HelpCircle, Save, FileUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Clock, HelpCircle, Save } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
-interface CreateExamModalProps {
+interface Exam {
+  id: string;
+  title: string;
+  date: string; // ISO string
+  duration: number;
+  totalQuestions: number;
+  description?: string;
+  passingScore?: number;
+}
+
+interface EditExamModalProps {
+  exam: Exam;
   onClose: () => void;
 }
 
-interface Question {
-  text: string;
-  type: 'singleChoice' | 'multipleChoice' | 'essay' | 'matching' | 'ordering';
-  points: number;
-  options?: string[]; // For single/multiple choice
-  correctAnswer?: string | string[]; // For single/multiple choice
-}
-
-const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
+const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
   const { isDark } = useTheme();
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(exam.title);
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
-  const [duration, setDuration] = useState('60');
-  const [totalQuestions, setTotalQuestions] = useState('10');
-  const [description, setDescription] = useState('');
-  const [passingScore, setPassingScore] = useState('60');
+  const [duration, setDuration] = useState(exam.duration.toString());
+  const [totalQuestions, setTotalQuestions] = useState(exam.totalQuestions.toString());
+  const [description, setDescription] = useState(exam.description || '');
+  const [passingScore, setPassingScore] = useState(exam.passingScore?.toString() || '60');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importedQuestions, setImportedQuestions] = useState<Question[]>([]);
 
-  console.log('CreateExamModal: Rendering component with isDark:', isDark);
+  useEffect(() => {
+    // Parse the ISO date into date and time for input fields
+    const examDate = new Date(exam.date);
+    if (!isNaN(examDate.getTime())) {
+      setDate(examDate.toISOString().split('T')[0]);
+      setStartTime(examDate.toISOString().split('T')[1].slice(0, 5));
+    }
+  }, [exam.date]);
+
+  console.log('EditExamModal: Rendering component for exam:', exam.id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    console.log('CreateExamModal: Form submitted with data:', {
+    console.log('EditExamModal: Form submitted with data:', {
       title,
       date,
       startTime,
@@ -48,7 +58,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
 
     try {
       // Validate required fields
-      console.log('CreateExamModal: Validating input fields...');
       if (!title || !date || !startTime || !duration || !totalQuestions || !passingScore) {
         throw new Error('All required fields must be filled');
       }
@@ -58,7 +67,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
       const passingScoreNum = parseInt(passingScore);
 
       // Validate numeric fields
-      console.log('CreateExamModal: Validating numeric inputs...');
       if (isNaN(durationNum) || durationNum < 10 || durationNum > 240) {
         throw new Error('Duration must be between 10 and 240 minutes');
       }
@@ -71,11 +79,11 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
 
       // Combine date and start time into ISO string
       const examDateTime = new Date(`${date}T${startTime}`).toISOString();
-      console.log('CreateExamModal: Combined exam date and time:', examDateTime);
+      console.log('EditExamModal: Combined exam date and time:', examDateTime);
 
-      // Save exam to Firestore
-      console.log('CreateExamModal: Attempting to create exam document in Firestore...');
-      const docRef = await addDoc(collection(db, 'exams'), {
+      // Update in Firestore
+      const examRef = doc(db, 'exams', exam.id);
+      await updateDoc(examRef, {
         title,
         date: examDateTime,
         duration: durationNum,
@@ -83,99 +91,14 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
         description: description || null,
         passingScore: passingScoreNum,
       });
-      console.log('CreateExamModal: Exam created successfully with ID:', docRef.id);
-
-      // If there are imported questions, save them under the exam
-      if (importedQuestions.length > 0) {
-        console.log(`CreateExamModal: Attempting to save ${importedQuestions.length} questions to subcollection...`);
-        const questionsCollection = collection(db, 'exams', docRef.id, 'questions');
-        for (const [index, question] of importedQuestions.entries()) {
-          console.log(`CreateExamModal: Saving question ${index + 1} with text: "${question.text}"...`);
-          try {
-            await setDoc(doc(questionsCollection, `question_${index + 1}`), {
-              text: question.text,
-              type: question.type,
-              points: question.points,
-              options: question.options || [],
-              correctAnswer: question.correctAnswer || '',
-            });
-            console.log(`CreateExamModal: Successfully saved question ${index + 1} for exam ${docRef.id}`);
-          } catch (subError: any) {
-            console.error(`CreateExamModal: Failed to save question ${index + 1}:`, subError.message, 'Code:', subError.code);
-            throw new Error(`Failed to save question ${index + 1}: ${subError.message}`);
-          }
-        }
-        console.log('CreateExamModal: All questions saved successfully.');
-      } else {
-        console.log('CreateExamModal: No questions to import, skipping subcollection writes.');
-      }
+      console.log('EditExamModal: Exam updated successfully with ID:', exam.id);
 
       setLoading(false);
-      console.log('CreateExamModal: Exam creation process completed, closing modal.');
       onClose();
     } catch (err: any) {
-      console.error('CreateExamModal: Error during exam creation process:', err.message, 'Code:', err.code);
-      setError(err.message || 'Failed to create exam');
+      console.error('EditExamModal: Error updating exam:', err.message, 'Code:', err.code);
+      setError(err.message || 'Failed to update exam');
       setLoading(false);
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setImportError('No file selected');
-      console.log('CreateExamModal: No file selected for import.');
-      return;
-    }
-
-    setImportError(null);
-    console.log('CreateExamModal: File selected for import:', file.name);
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        console.log('CreateExamModal: File content read successfully, length:', text.length);
-        // Handle JSON
-        if (file.name.endsWith('.json')) {
-          console.log('CreateExamModal: Processing JSON file...');
-          const jsonData = JSON.parse(text);
-          console.log('CreateExamModal: JSON parsed, raw data:', jsonData);
-          if (Array.isArray(jsonData) && jsonData.length > 0) {
-            const questions = jsonData.map((q: any) => ({
-              text: q.text || 'Untitled Question',
-              type: q.type || 'singleChoice',
-              points: q.points || 1,
-              options: q.options || [],
-              correctAnswer: q.correctAnswer || '',
-            })) as Question[];
-            setImportedQuestions(questions);
-            console.log('CreateExamModal: JSON parsed, questions imported:', questions.length, 'questions:', questions);
-          } else {
-            throw new Error('Invalid JSON format: Expected an array of questions');
-          }
-        }
-        // Handle Excel (Placeholder - requires 'xlsx' library)
-        else if (file.name.match(/\.(xlsx|xls|csv)$/)) {
-          setImportError(
-            'Excel import is not fully implemented. Please use JSON format or install "xlsx" library for Excel support.'
-          );
-          console.log('CreateExamModal: Excel file detected but not processed:', file.name);
-        } else {
-          throw new Error('Unsupported file type. Use JSON or Excel format.');
-        }
-      } catch (err: any) {
-        setImportError(err.message || 'Failed to parse file');
-        console.error('CreateExamModal: Error parsing file:', err.message, 'Stack:', err.stack);
-      }
-    };
-
-    if (file.name.match(/\.(xlsx|xls|csv)$/)) {
-      reader.readAsBinaryString(file); // For Excel, if using 'xlsx' library
-      console.log('CreateExamModal: Reading file as binary string for Excel processing.');
-    } else {
-      reader.readAsText(file); // For JSON
-      console.log('CreateExamModal: Reading file as text for JSON processing.');
     }
   };
 
@@ -187,10 +110,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
         }`}
       >
         <div className="flex justify-between items-center p-6 border-b border-primary/30">
-          <h2 className="text-xl font-semibold font-glacial text-primary">Create New Exam</h2>
+          <h2 className="text-xl font-semibold font-glacial text-primary">Edit Exam</h2>
           <button
             onClick={() => {
-              console.log('CreateExamModal: Close button clicked');
+              console.log('EditExamModal: Close button clicked');
               onClose();
             }}
             className="text-primary hover:text-secondary"
@@ -213,7 +136,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
               id="title"
               value={title}
               onChange={(e) => {
-                console.log('CreateExamModal: Title updated:', e.target.value);
+                console.log('EditExamModal: Title updated:', e.target.value);
                 setTitle(e.target.value);
               }}
               className={`mt-1 w-full rounded-lg text-dark-text placeholder-gray-500 border focus:ring-2 focus:ring-primary focus:outline-none px-4 py-2 ${
@@ -225,7 +148,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Date */}
             <div>
               <label htmlFor="date" className="block text-sm font-medium text-primary">Exam Date</label>
               <div className="relative mt-1">
@@ -237,7 +159,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                   id="date"
                   value={date}
                   onChange={(e) => {
-                    console.log('CreateExamModal: Date updated:', e.target.value);
+                    console.log('EditExamModal: Date updated:', e.target.value);
                     setDate(e.target.value);
                   }}
                   className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
@@ -248,7 +170,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
               </div>
             </div>
 
-            {/* Start Time */}
             <div>
               <label htmlFor="startTime" className="block text-sm font-medium text-primary">Start Time</label>
               <div className="relative mt-1">
@@ -260,7 +181,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                   id="startTime"
                   value={startTime}
                   onChange={(e) => {
-                    console.log('CreateExamModal: StartTime updated:', e.target.value);
+                    console.log('EditExamModal: StartTime updated:', e.target.value);
                     setStartTime(e.target.value);
                   }}
                   className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
@@ -273,7 +194,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Duration */}
             <div>
               <label htmlFor="duration" className="block text-sm font-medium text-primary">Duration (minutes)</label>
               <div className="relative mt-1">
@@ -287,7 +207,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                   max="240"
                   value={duration}
                   onChange={(e) => {
-                    console.log('CreateExamModal: Duration updated:', e.target.value);
+                    console.log('EditExamModal: Duration updated:', e.target.value);
                     setDuration(e.target.value);
                   }}
                   className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
@@ -298,7 +218,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
               </div>
             </div>
 
-            {/* Questions */}
             <div>
               <label htmlFor="totalQuestions" className="block text-sm font-medium text-primary">Questions Per Student</label>
               <div className="relative mt-1">
@@ -312,7 +231,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                   max="100"
                   value={totalQuestions}
                   onChange={(e) => {
-                    console.log('CreateExamModal: TotalQuestions updated:', e.target.value);
+                    console.log('EditExamModal: TotalQuestions updated:', e.target.value);
                     setTotalQuestions(e.target.value);
                   }}
                   className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
@@ -323,7 +242,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
               </div>
             </div>
 
-            {/* Passing Score */}
             <div>
               <label htmlFor="passingScore" className="block text-sm font-medium text-primary">Passing Score (%)</label>
               <input
@@ -333,7 +251,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                 max="100"
                 value={passingScore}
                 onChange={(e) => {
-                  console.log('CreateExamModal: PassingScore updated:', e.target.value);
+                  console.log('EditExamModal: PassingScore updated:', e.target.value);
                   setPassingScore(e.target.value);
                 }}
                 className={`mt-1 w-full rounded-lg text-dark-text border focus:ring-2 focus:ring-primary px-4 py-2 focus:outline-none ${
@@ -344,7 +262,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-primary">Description (Optional)</label>
             <textarea
@@ -352,7 +269,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
               rows={3}
               value={description}
               onChange={(e) => {
-                console.log('CreateExamModal: Description updated:', e.target.value);
+                console.log('EditExamModal: Description updated:', e.target.value);
                 setDescription(e.target.value);
               }}
               className={`mt-1 w-full rounded-lg text-dark-text border focus:ring-2 focus:ring-primary px-4 py-2 placeholder-gray-400 focus:outline-none ${
@@ -362,39 +279,11 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
             />
           </div>
 
-          {/* Import Questions */}
-          <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-4">
-            <h3 className="font-medium text-primary flex items-center">
-              <FileUp className="h-5 w-5 mr-2" />
-              Question Import
-            </h3>
-            <p className="mt-2 text-sm text-dark-text/80">
-              Import questions from a JSON or Excel file (columns for question, options, answer).
-            </p>
-            {importError && (
-              <div className="mt-2 bg-red-900/40 text-red-300 p-2 rounded-md text-xs">
-                {importError}
-              </div>
-            )}
-            {importedQuestions.length > 0 && (
-              <p className="mt-2 text-sm text-green-400">
-                {importedQuestions.length} questions imported successfully.
-              </p>
-            )}
-            <div className="mt-3">
-              <label className="block w-full px-4 py-2 bg-primary text-darkbg hover:bg-primary/80 rounded-lg text-sm font-medium text-center cursor-pointer transition-colors">
-                <input type="file" className="hidden" accept=".json,.xlsx,.xls,.csv" onChange={handleFileUpload} />
-                Select File (JSON/Excel)
-              </label>
-            </div>
-          </div>
-
-          {/* Footer buttons */}
           <div className="mt-8 flex justify-end space-x-3">
             <button
               type="button"
               onClick={() => {
-                console.log('CreateExamModal: Cancel button clicked');
+                console.log('EditExamModal: Cancel button clicked');
                 onClose();
               }}
               className={`px-4 py-2 rounded-lg text-sm font-medium ${
@@ -413,7 +302,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
               }`}
             >
               <Save className="h-4 w-4 mr-2" />
-              {loading ? 'Creating...' : 'Create Exam'}
+              {loading ? 'Updating...' : 'Update Exam'}
             </button>
           </div>
         </form>
@@ -422,4 +311,4 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
   );
 };
 
-export default CreateExamModal;
+export default EditExamModal;

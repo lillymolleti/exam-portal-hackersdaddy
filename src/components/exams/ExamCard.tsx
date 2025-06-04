@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, HelpCircle } from 'lucide-react';
+import { Calendar, Clock, HelpCircle, Edit } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 interface Exam {
@@ -16,9 +16,10 @@ interface Exam {
 interface ExamCardProps {
   exam: Exam;
   role: 'admin' | 'student';
+  onEdit?: (exam: Exam) => void; // New prop for edit callback
 }
 
-const ExamCard: React.FC<ExamCardProps> = ({ exam, role }) => {
+const ExamCard: React.FC<ExamCardProps> = ({ exam, role, onEdit }) => {
   const { isDark } = useTheme();
   console.log('ExamCard: Rendering for exam:', exam.id, 'title:', exam.title, 'role:', role, 'isDark:', isDark);
 
@@ -82,15 +83,17 @@ const ExamCard: React.FC<ExamCardProps> = ({ exam, role }) => {
       <div className="mt-6">
         {isAdmin ? (
           <div className="flex space-x-3">
-            <Link
-              to={`/admin/exams/${exam.id}/edit`}
+            <button
+              onClick={() => {
+                console.log('ExamCard: Triggering edit for exam:', exam.id);
+                if (onEdit) onEdit(exam);
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-medium flex-1 text-center transition-colors ${
                 isDark ? 'bg-[#2c2c2c] hover:bg-[#3a3a3a] text-dark-text' : 'bg-gray-200 hover:bg-gray-300 text-light-text'
               }`}
-              onClick={() => console.log('ExamCard: Navigating to edit exam:', exam.id)}
             >
-              Edit
-            </Link>
+              <Edit className="h-4 w-4 mr-1 inline" /> Edit
+            </button>
             <Link
               to={`/admin/exams/${exam.id}/results`}
               className="px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-darkbg rounded-lg text-sm font-medium flex-1 text-center transition-all"

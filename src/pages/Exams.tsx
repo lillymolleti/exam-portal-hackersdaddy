@@ -5,6 +5,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import ExamCard from '../components/exams/ExamCard';
 import CreateExamModal from '../components/exams/CreateExamModal';
+import EditExamModal from '../components/exams/EditExamModal';
 
 interface Exam {
   id: string;
@@ -22,9 +23,11 @@ const Exams: React.FC = () => {
   const isAdmin = role === 'admin';
 
   const [exams, setExams] = useState<Exam[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>(''); // Added back setSearchTerm
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   console.log('Exams: Rendering component with user:', user?.name, 'role:', role, 'isAdmin:', isAdmin);
@@ -91,6 +94,12 @@ const Exams: React.FC = () => {
     return matchesSearch;
   });
   console.log('Exams: Filtered exams:', filteredExams);
+
+  const handleEditExam = (exam: Exam) => {
+    console.log('Exams: Opening EditExamModal for exam:', exam.id);
+    setSelectedExam(exam);
+    setIsEditModalOpen(true);
+  };
 
   if (loading) {
     console.log('Exams: Rendering loading state');
@@ -181,7 +190,14 @@ const Exams: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredExams.map((exam) => {
           console.log('Exams: Rendering ExamCard for exam:', exam.id);
-          return <ExamCard key={exam.id} exam={exam} role={role as 'admin' | 'student'} />;
+          return (
+            <ExamCard
+              key={exam.id}
+              exam={exam}
+              role={role as 'admin' | 'student'}
+              onEdit={isAdmin ? handleEditExam : undefined}
+            />
+          );
         })}
       </div>
 
@@ -213,10 +229,26 @@ const Exams: React.FC = () => {
       {isCreateModalOpen && (
         <>
           {console.log('Exams: Rendering CreateExamModal')}
-          <CreateExamModal onClose={() => {
-            console.log('Exams: Closing CreateExamModal');
-            setIsCreateModalOpen(false);
-          }} />
+          <CreateExamModal
+            onClose={() => {
+              console.log('Exams: Closing CreateExamModal');
+              setIsCreateModalOpen(false);
+            }}
+          />
+        </>
+      )}
+
+      {isEditModalOpen && selectedExam && (
+        <>
+          {console.log('Exams: Rendering EditExamModal for exam:', selectedExam.id)}
+          <EditExamModal
+            exam={selectedExam}
+            onClose={() => {
+              console.log('Exams: Closing EditExamModal');
+              setIsEditModalOpen(false);
+              setSelectedExam(null);
+            }}
+          />
         </>
       )}
     </div>
