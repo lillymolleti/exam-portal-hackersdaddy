@@ -47,7 +47,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
     });
 
     try {
-      // Validate required fields
       console.log('CreateExamModal: Validating input fields...');
       if (!title || !date || !startTime || !duration || !totalQuestions || !passingScore) {
         throw new Error('All required fields must be filled');
@@ -57,7 +56,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
       const totalQuestionsNum = parseInt(totalQuestions);
       const passingScoreNum = parseInt(passingScore);
 
-      // Validate numeric fields
       console.log('CreateExamModal: Validating numeric inputs...');
       if (isNaN(durationNum) || durationNum < 10 || durationNum > 240) {
         throw new Error('Duration must be between 10 and 240 minutes');
@@ -69,11 +67,9 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
         throw new Error('Passing score must be between 1 and 100');
       }
 
-      // Combine date and start time into ISO string
       const examDateTime = new Date(`${date}T${startTime}`).toISOString();
       console.log('CreateExamModal: Combined exam date and time:', examDateTime);
 
-      // Save exam to Firestore
       console.log('CreateExamModal: Attempting to create exam document in Firestore...');
       const docRef = await addDoc(collection(db, 'exams'), {
         title,
@@ -85,7 +81,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
       });
       console.log('CreateExamModal: Exam created successfully with ID:', docRef.id);
 
-      // If there are imported questions, save them under the exam
       if (importedQuestions.length > 0) {
         console.log(`CreateExamModal: Attempting to save ${importedQuestions.length} questions to subcollection...`);
         const questionsCollection = collection(db, 'exams', docRef.id, 'questions');
@@ -136,7 +131,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
       try {
         const text = event.target?.result as string;
         console.log('CreateExamModal: File content read successfully, length:', text.length);
-        // Handle JSON
         if (file.name.endsWith('.json')) {
           console.log('CreateExamModal: Processing JSON file...');
           const jsonData = JSON.parse(text);
@@ -154,9 +148,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
           } else {
             throw new Error('Invalid JSON format: Expected an array of questions');
           }
-        }
-        // Handle Excel (Placeholder - requires 'xlsx' library)
-        else if (file.name.match(/\.(xlsx|xls|csv)$/)) {
+        } else if (file.name.match(/\.(xlsx|xls|csv)$/)) {
           setImportError(
             'Excel import is not fully implemented. Please use JSON format or install "xlsx" library for Excel support.'
           );
@@ -171,22 +163,22 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
     };
 
     if (file.name.match(/\.(xlsx|xls|csv)$/)) {
-      reader.readAsBinaryString(file); // For Excel, if using 'xlsx' library
+      reader.readAsBinaryString(file);
       console.log('CreateExamModal: Reading file as binary string for Excel processing.');
     } else {
-      reader.readAsText(file); // For JSON
+      reader.readAsText(file);
       console.log('CreateExamModal: Reading file as text for JSON processing.');
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins">
+    <div className={`fixed inset-0 ${isDark ? 'bg-black/60' : 'bg-black/40'} backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins`}>
       <div
-        className={`bg-darkbg rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto ${
-          isDark ? 'border-primary/40' : 'border-gray-300'
+        className={`rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto ${
+          isDark ? 'bg-darkbg border-primary/40' : 'bg-light-bg border-secondary/30'
         }`}
       >
-        <div className="flex justify-between items-center p-6 border-b border-primary/30">
+        <div className={`flex justify-between items-center p-6 ${isDark ? 'border-b border-primary/30' : 'border-b border-secondary/20'}`}>
           <h2 className="text-xl font-semibold font-glacial text-primary">Create New Exam</h2>
           <button
             onClick={() => {
@@ -201,7 +193,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
 
         <form onSubmit={handleSubmit} className={`p-6 space-y-6 ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
           {error && (
-            <div className="bg-red-900/40 text-red-300 p-3 rounded-md text-sm">
+            <div className={`${isDark ? 'bg-dark-error/20 text-dark-error' : 'bg-light-error/20 text-light-error'} p-3 rounded-md text-sm`}>
               {error}
             </div>
           )}
@@ -216,8 +208,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                 console.log('CreateExamModal: Title updated:', e.target.value);
                 setTitle(e.target.value);
               }}
-              className={`mt-1 w-full rounded-lg text-dark-text placeholder-gray-500 border focus:ring-2 focus:ring-primary focus:outline-none px-4 py-2 ${
-                isDark ? 'bg-[#1f1f1f] border-secondary/50' : 'bg-light-bg border-gray-300'
+              className={`mt-1 w-full rounded-lg border focus:ring-2 focus:ring-primary focus:outline-none px-4 py-2 ${
+                isDark
+                  ? 'bg-dark-secondary-bg border-secondary/50 text-dark-text placeholder-gray-500'
+                  : 'bg-light-bg border-gray-300 text-light-text placeholder-gray-400'
               }`}
               placeholder="Enter exam title"
               required
@@ -240,8 +234,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                     console.log('CreateExamModal: Date updated:', e.target.value);
                     setDate(e.target.value);
                   }}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                      : 'bg-light-bg border-gray-300 text-light-text'
                   }`}
                   required
                 />
@@ -263,8 +259,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                     console.log('CreateExamModal: StartTime updated:', e.target.value);
                     setStartTime(e.target.value);
                   }}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                      : 'bg-light-bg border-gray-300 text-light-text'
                   }`}
                   required
                 />
@@ -290,8 +288,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                     console.log('CreateExamModal: Duration updated:', e.target.value);
                     setDuration(e.target.value);
                   }}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                      : 'bg-light-bg border-gray-300 text-light-text'
                   }`}
                   required
                 />
@@ -315,8 +315,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                     console.log('CreateExamModal: TotalQuestions updated:', e.target.value);
                     setTotalQuestions(e.target.value);
                   }}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                      : 'bg-light-bg border-gray-300 text-light-text'
                   }`}
                   required
                 />
@@ -336,8 +338,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                   console.log('CreateExamModal: PassingScore updated:', e.target.value);
                   setPassingScore(e.target.value);
                 }}
-                className={`mt-1 w-full rounded-lg text-dark-text border focus:ring-2 focus:ring-primary px-4 py-2 focus:outline-none ${
-                  isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                className={`mt-1 w-full rounded-lg border focus:ring-2 focus:ring-primary px-4 py-2 focus:outline-none ${
+                  isDark
+                    ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                    : 'bg-light-bg border-gray-300 text-light-text'
                 }`}
                 required
               />
@@ -355,24 +359,26 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                 console.log('CreateExamModal: Description updated:', e.target.value);
                 setDescription(e.target.value);
               }}
-              className={`mt-1 w-full rounded-lg text-dark-text border focus:ring-2 focus:ring-primary px-4 py-2 placeholder-gray-400 focus:outline-none ${
-                isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+              className={`mt-1 w-full rounded-lg border focus:ring-2 focus:ring-primary px-4 py-2 focus:outline-none ${
+                isDark
+                  ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text placeholder-gray-500'
+                  : 'bg-light-bg border-gray-300 text-light-text placeholder-gray-400'
               }`}
               placeholder="Enter exam description"
             />
           </div>
 
           {/* Import Questions */}
-          <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-4">
+          <div className={`${isDark ? 'bg-secondary/10' : 'bg-secondary/5'} border ${isDark ? 'border-secondary/30' : 'border-secondary/20'} rounded-lg p-4`}>
             <h3 className="font-medium text-primary flex items-center">
               <FileUp className="h-5 w-5 mr-2" />
               Question Import
             </h3>
-            <p className="mt-2 text-sm text-dark-text/80">
+            <p className={`mt-2 text-sm ${isDark ? 'text-dark-text/80' : 'text-light-text/80'}`}>
               Import questions from a JSON or Excel file (columns for question, options, answer).
             </p>
             {importError && (
-              <div className="mt-2 bg-red-900/40 text-red-300 p-2 rounded-md text-xs">
+              <div className={`mt-2 ${isDark ? 'bg-dark-error/20 text-dark-error' : 'bg-light-error/20 text-light-error'} p-2 rounded-md text-xs`}>
                 {importError}
               </div>
             )}
@@ -382,7 +388,11 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
               </p>
             )}
             <div className="mt-3">
-              <label className="block w-full px-4 py-2 bg-primary text-darkbg hover:bg-primary/80 rounded-lg text-sm font-medium text-center cursor-pointer transition-colors">
+              <label
+                className={`block w-full px-4 py-2 ${
+                  isDark ? 'bg-primary text-darkbg hover:bg-primary/80' : 'bg-primary text-darkbg hover:bg-primary/90'
+                } rounded-lg text-sm font-medium text-center cursor-pointer transition-colors`}
+              >
                 <input type="file" className="hidden" accept=".json,.xlsx,.xls,.csv" onChange={handleFileUpload} />
                 Select File (JSON/Excel)
               </label>
@@ -397,8 +407,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ onClose }) => {
                 console.log('CreateExamModal: Cancel button clicked');
                 onClose();
               }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                isDark ? 'bg-[#1f1f1f] hover:bg-[#2a2a2a] text-dark-text' : 'bg-gray-200 hover:bg-gray-300 text-light-text'
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isDark
+                  ? 'bg-dark-secondary-bg hover:bg-gray-700 text-dark-text'
+                  : 'bg-light-secondary-bg hover:bg-gray-300 text-light-text'
               }`}
             >
               Cancel

@@ -42,7 +42,7 @@ const AdminDashboard: React.FC = () => {
   });
   const [recentExams, setRecentExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchedCount,setFetchedCount] = useState(0); // Track initial fetches
+  const [fetchedCount, setFetchedCount] = useState(0); // Track initial fetches
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -150,7 +150,7 @@ const AdminDashboard: React.FC = () => {
         <h1 className={`text-2xl font-bold font-glacial text-primary`}>
           Welcome, {user?.name || user?.email || 'Admin'}
         </h1>
-        <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`text-sm mt-1 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
           Manage your exams and monitor student performance
         </p>
       </div>
@@ -158,12 +158,12 @@ const AdminDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div
           className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
-            isDark ? 'bg-darkbg/80 border-gray-700' : 'bg-light-bg/80 border-gray-300'
+            isDark ? 'bg-darkbg/80 border-dark-neutral' : 'bg-light-bg/80 border-light-neutral'
           }`}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Total Exams</p>
+              <p className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>Total Exams</p>
               <p className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                 {stats.totalExams}
               </p>
@@ -173,12 +173,12 @@ const AdminDashboard: React.FC = () => {
         </div>
         <div
           className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
-            isDark ? 'bg-darkbg/80 border-gray-700' : 'bg-light-bg/80 border-gray-300'
+            isDark ? 'bg-darkbg/80 border-dark-neutral' : 'bg-light-bg/80 border-light-neutral'
           }`}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Active Students</p>
+              <p className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>Active Students</p>
               <p className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                 {stats.activeStudents}
               </p>
@@ -188,12 +188,12 @@ const AdminDashboard: React.FC = () => {
         </div>
         <div
           className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
-            isDark ? 'bg-darkbg/80 border-gray-700' : 'bg-light-bg/80 border-gray-300'
+            isDark ? 'bg-darkbg/80 border-dark-neutral' : 'bg-light-bg/80 border-light-neutral'
           }`}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Completed Exams</p>
+              <p className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>Completed Exams</p>
               <p className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                 {stats.completedExams}
               </p>
@@ -203,12 +203,12 @@ const AdminDashboard: React.FC = () => {
         </div>
         <div
           className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
-            isDark ? 'bg-darkbg/80 border-gray-700' : 'bg-light-bg/80 border-gray-300'
+            isDark ? 'bg-darkbg/80 border-dark-neutral' : 'bg-light-bg/80 border-light-neutral'
           }`}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Average Score</p>
+              <p className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>Average Score</p>
               <p className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                 {stats.averageScore}%
               </p>
@@ -230,7 +230,7 @@ const AdminDashboard: React.FC = () => {
         </div>
         {recentExams.length === 0 ? (
           <div className="text-center py-12">
-            <p className={`text-gray-400 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-secondary/30 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
               No recent exams found. Create a new exam to get started.
             </p>
           </div>

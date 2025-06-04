@@ -1,4 +1,3 @@
-// src/components/Layout/Header.tsx
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -18,10 +17,9 @@ const Header: React.FC<HeaderProps> = ({ role, toggleSidebar }) => {
     role === 'admin'
       ? 'Admin Dashboard'
       : role === 'student'
-        ? 'Student Dashboard'
-        : 'Dashboard';
+      ? 'Student Dashboard'
+      : 'Dashboard';
 
-  // once authLoading goes false, stop showing skeleton
   useEffect(() => {
     if (!authLoading) {
       setIsLoading(false);
@@ -52,7 +50,6 @@ const Header: React.FC<HeaderProps> = ({ role, toggleSidebar }) => {
     return (
       <header className={headerClasses}>
         <div className="flex justify-between items-center">
-          {/* Left: menu button + title */}
           <div className="flex items-center space-x-4">
             <button
               onClick={toggleSidebar}
@@ -65,7 +62,6 @@ const Header: React.FC<HeaderProps> = ({ role, toggleSidebar }) => {
             </h2>
           </div>
 
-          {/* Right: loading skeleton */}
           <div className="flex items-center space-x-4">
             <div className="animate-pulse bg-gray-300 rounded-full h-8 w-8" />
           </div>
@@ -77,7 +73,6 @@ const Header: React.FC<HeaderProps> = ({ role, toggleSidebar }) => {
   return (
     <header className={headerClasses}>
       <div className="flex justify-between items-center">
-        {/* Left: menu button + title */}
         <div className="flex items-center space-x-4">
           <button
             onClick={toggleSidebar}
@@ -90,41 +85,31 @@ const Header: React.FC<HeaderProps> = ({ role, toggleSidebar }) => {
           </h2>
         </div>
 
-        {/* Right: theme toggle, notifications, user */}
         <div className="flex items-center space-x-4">
-          {/* Theme toggle */}
           <button
             onClick={() => {
               console.log('Header: toggling theme, wasDark=', isDark);
               toggleTheme();
             }}
-            className={`
-              p-2 rounded-full transition-all
-              ${isDark
-                ? 'text-gray-300 hover:text-primary'
-                : 'text-gray-700 hover:text-primary'}
-            `}
+            className={`p-2 rounded-full transition-all ${
+              isDark ? 'text-gray-300 hover:text-primary' : 'text-gray-700 hover:text-primary'
+            }`}
           >
             {isDark ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
-          {/* Bell */}
           <div className="relative">
             <button
               onClick={() => console.log('Header: bell clicked')}
-              className={`
-                p-2 rounded-full transition-all
-                ${isDark
-                  ? 'text-gray-300 hover:text-primary'
-                  : 'text-gray-700 hover:text-primary'}
-              `}
+              className={`p-2 rounded-full transition-all ${
+                isDark ? 'text-gray-300 hover:text-primary' : 'text-gray-700 hover:text-primary'
+              }`}
             >
               <Bell size={20} />
               <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />
             </button>
           </div>
 
-          {/* User avatar + email */}
           <div className="flex items-center space-x-2">
             <div className="bg-gradient-to-r from-primary to-secondary p-0.5 rounded-full">
               <div className={`rounded-full p-1 ${isDark ? 'bg-darkbg' : 'bg-light-bg'}`}>

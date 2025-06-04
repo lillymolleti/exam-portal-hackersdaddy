@@ -6,8 +6,8 @@ import { LogOut, Home, FileText, Users, HelpCircle, BarChart, Clock, X } from 'l
 
 interface SidebarProps {
   role: string;
-  isOpen: boolean; // Added to control sidebar visibility
-  toggleSidebar: () => void; // Added to toggle sidebar
+  isOpen: boolean;
+  toggleSidebar: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, toggleSidebar }) => {
@@ -39,10 +39,11 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, toggleSidebar }) => {
 
   return (
     <>
-      {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 w-64 bg-darkbg border-r border-gray-700 p-6 flex flex-col font-poppins transform transition-transform duration-300 ease-in-out z-50 ${
-          isDark ? 'bg-darkbg text-dark-text' : 'bg-light-bg text-light-text'
+        className={`fixed inset-y-0 left-0 w-64 border-r p-6 flex flex-col font-poppins transform transition-transform duration-300 ease-in-out z-50 ${
+          isDark
+            ? 'bg-darkbg border-gray-700 text-dark-text'
+            : 'bg-light-bg border-gray-300 text-light-text'
         } ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:static md:inset-auto`}
       >
         <div className="flex items-center justify-between mb-8">
@@ -59,7 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, toggleSidebar }) => {
               to={link.path}
               onClick={() => {
                 console.log(`Sidebar: NavLink clicked for ${link.name}`);
-                if (window.innerWidth < 768) toggleSidebar(); // Close sidebar on mobile after clicking a link
+                if (window.innerWidth < 768) toggleSidebar();
               }}
               className={({ isActive }) => {
                 console.log(`Sidebar: NavLink rendered for ${link.name}, isActive:`, isActive);
@@ -91,10 +92,9 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, toggleSidebar }) => {
         </div>
       </aside>
 
-      {/* Overlay for mobile when sidebar is open */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className={`fixed inset-0 ${isDark ? 'bg-black/50' : 'bg-black/30'} z-40 md:hidden`}
           onClick={toggleSidebar}
         ></div>
       )}

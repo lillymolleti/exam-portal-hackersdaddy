@@ -175,7 +175,6 @@ const Questions: React.FC = () => {
     });
 
     try {
-      // Validate inputs
       if (!editText || !editPoints) {
         throw new Error('Question text and points are required.');
       }
@@ -183,7 +182,6 @@ const Questions: React.FC = () => {
       if (isNaN(pointsNum) || pointsNum < 1) {
         throw new Error('Points must be a positive number.');
       }
-      // For singleChoice and multipleChoice, validate options and correct answers
       if (editType === 'singleChoice' || editType === 'multipleChoice') {
         if (editOptions.length < 2 || editOptions.some(opt => !opt.trim())) {
           throw new Error('At least two non-empty options are required.');
@@ -206,7 +204,6 @@ const Questions: React.FC = () => {
       });
       console.log('Questions: Question updated successfully:', selectedQuestion.id);
 
-      // Update local state
       const updatedQuestion = {
         ...selectedQuestion,
         text: editText,
@@ -240,7 +237,6 @@ const Questions: React.FC = () => {
     });
 
     try {
-      // Validate inputs
       if (!addText || !addPoints || !addExamId) {
         throw new Error('Question text, points, and exam selection are required.');
       }
@@ -248,7 +244,6 @@ const Questions: React.FC = () => {
       if (isNaN(pointsNum) || pointsNum < 1) {
         throw new Error('Points must be a positive number.');
       }
-      // For singleChoice and multipleChoice, validate options and correct answers
       if (addType === 'singleChoice' || addType === 'multipleChoice') {
         if (addOptions.length < 2 || addOptions.some(opt => !opt.trim())) {
           throw new Error('At least two non-empty options are required.');
@@ -271,7 +266,6 @@ const Questions: React.FC = () => {
       });
       console.log('Questions: New question added successfully with ID:', docRef.id);
 
-      // Update local state
       const selectedExam = exams.find(exam => exam.id === addExamId);
       const newQuestion: Question = {
         id: docRef.id,
@@ -285,7 +279,6 @@ const Questions: React.FC = () => {
       };
       setQuestions([...questions, newQuestion]);
       setIsAddModalOpen(false);
-      // Reset form fields
       setAddText('');
       setAddType('singleChoice');
       setAddPoints('1');
@@ -340,13 +333,13 @@ const Questions: React.FC = () => {
 
   if (loading) {
     console.log('Questions: Rendering loading state');
-    return <div className={`p-6 text-center ${isDark ? 'bg-darkbg text-white' : 'bg-light-bg text-light-text'}`}>Loading questions...</div>;
+    return <div className={`p-6 text-center ${isDark ? 'bg-darkbg text-dark-text' : 'bg-light-bg text-light-text'}`}>Loading questions...</div>;
   }
 
   if (error) {
     console.log('Questions: Rendering error state with message:', error);
     return (
-      <div className={`p-6 text-center ${isDark ? 'bg-darkbg text-red-300' : 'bg-light-bg text-red-600'}`}>
+      <div className={`p-6 text-center ${isDark ? 'bg-darkbg text-dark-error' : 'bg-light-bg text-light-error'}`}>
         <p>{error}</p>
         <button
           onClick={() => {
@@ -392,7 +385,11 @@ const Questions: React.FC = () => {
               fetchData();
             }
           }}
-          className={`mt-4 px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-gray-700 text-white' : 'bg-gray-300 text-black'}`}
+          className={`mt-4 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            isDark
+              ? 'bg-dark-neutral hover:bg-secondary/50 text-dark-text'
+              : 'bg-light-neutral hover:bg-secondary/30 text-light-text'
+          }`}
         >
           Retry
         </button>
@@ -406,8 +403,8 @@ const Questions: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
-          <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-light-text'}`}>Questions</h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <h1 className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>Questions</h1>
+          <p className={`text-sm mt-1 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
             Manage questions for your exams
           </p>
         </div>
@@ -417,7 +414,9 @@ const Questions: React.FC = () => {
             setIsAddModalOpen(true);
           }}
           className={`mt-4 md:mt-0 px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-all btn-glow ${
-            isDark ? 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-white' : 'bg-gradient-to-r from-light-text to-gray-700 hover:from-gray-600 hover:to-gray-800 text-light-bg'
+            isDark
+              ? 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-dark-text'
+              : 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-darkbg'
           }`}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -428,7 +427,7 @@ const Questions: React.FC = () => {
       <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className={`h-5 w-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+            <Search className={`h-5 w-5 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`} />
           </div>
           <input
             type="text"
@@ -439,13 +438,15 @@ const Questions: React.FC = () => {
               setSearchTerm(e.target.value);
             }}
             className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-              isDark ? 'bg-darkbg border-gray-700 text-white placeholder-gray-500' : 'bg-light-bg border-gray-300 text-light-text placeholder-gray-400'
+              isDark
+                ? 'bg-darkbg border-dark-neutral text-dark-text placeholder-secondary/30'
+                : 'bg-light-bg border-light-neutral text-light-text placeholder-secondary/20'
             }`}
           />
         </div>
         <div className="relative w-full md:w-64">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Filter className={`h-5 w-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+            <Filter className={`h-5 w-5 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`} />
           </div>
           <select
             value={filterExam}
@@ -454,7 +455,9 @@ const Questions: React.FC = () => {
               setFilterExam(e.target.value);
             }}
             className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
-              isDark ? 'bg-darkbg border-gray-700 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+              isDark
+                ? 'bg-darkbg border-dark-neutral text-dark-text'
+                : 'bg-light-bg border-light-neutral text-light-text'
             }`}
           >
             <option value="all">All Exams</option>
@@ -463,7 +466,7 @@ const Questions: React.FC = () => {
             ))}
           </select>
           <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            <svg className={`h-5 w-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} fill="none" viewBox="0 0 20 20" stroke="currentColor">
+            <svg className={`h-5 w-5 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`} fill="none" viewBox="0 0 20 20" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -471,55 +474,55 @@ const Questions: React.FC = () => {
       </div>
 
       <div className={`rounded-xl border overflow-hidden backdrop-blur-sm glass-effect ${
-        isDark ? 'bg-darkbg border-gray-700' : 'bg-light-bg border-gray-300'
+        isDark ? 'bg-darkbg border-dark-neutral' : 'bg-light-bg border-light-neutral'
       }`}>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-700">
+          <table className="min-w-full divide-y divide-secondary/20">
             <thead className={isDark ? 'bg-darkbg' : 'bg-light-bg'}>
               <tr>
-                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
                   Question
                 </th>
-                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
                   Exam
                 </th>
-                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
                   Type
                 </th>
-                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
                   Points
                 </th>
-                <th scope="col" className={`px-6 py-3 text-right text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <th scope="col" className={`px-6 py-3 text-right text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className={isDark ? 'divide-gray-700' : 'divide-gray-300'}>
+            <tbody className={isDark ? 'divide-secondary/20' : 'divide-secondary/10'}>
               {filteredQuestions.map((question) => (
-                <tr key={question.id} className={`hover:bg-gray-700/30 transition-colors ${isDark ? '' : 'hover:bg-gray-200/30'}`}>
+                <tr key={question.id} className={`hover:bg-secondary/10 transition-colors ${isDark ? '' : 'hover:bg-secondary/5'}`}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-light-text'}`}>{question.text}</div>
+                    <div className={`text-sm font-medium ${isDark ? 'text-dark-text' : 'text-light-text'}`}>{question.text}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{question.examTitle}</div>
+                    <div className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>{question.examTitle}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{question.type}</div>
+                    <div className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>{question.type}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm ${isDark ? 'text-white' : 'text-light-text'}`}>{question.points}</div>
+                    <div className={`text-sm ${isDark ? 'text-dark-text' : 'text-light-text'}`}>{question.points}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <div className="flex justify-end space-x-3">
                       <button
                         onClick={() => handleEditQuestion(question)}
-                        className={isDark ? 'text-primary hover:text-[#4be3b0]' : 'text-light-text hover:text-gray-800'}
+                        className={isDark ? 'text-primary hover:text-[#4be3b0]' : 'text-primary hover:text-[#4be3b0]'}
                       >
                         <Edit className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => handleDeleteQuestion(question)}
-                        className={isDark ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-800'}
+                        className={isDark ? 'text-dark-error hover:text-dark-error/80' : 'text-light-error hover:text-light-error/80'}
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
@@ -535,15 +538,15 @@ const Questions: React.FC = () => {
       {filteredQuestions.length === 0 && (
         <div className="text-center py-12">
           <div className={`rounded-xl border p-8 mx-auto max-w-md backdrop-blur-sm glass-effect ${
-            isDark ? 'bg-darkbg border-gray-700' : 'bg-light-bg border-gray-300'
+            isDark ? 'bg-darkbg border-dark-neutral' : 'bg-light-bg border-light-neutral'
           }`}>
             <div className={`mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-4 ${
-              isDark ? 'bg-gray-700' : 'bg-gray-200'
+              isDark ? 'bg-dark-neutral' : 'bg-light-neutral'
             }`}>
-              <Search className={`h-8 w-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+              <Search className={`h-8 w-8 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`} />
             </div>
-            <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-light-text'}`}>No questions found</h3>
-            <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <h3 className={`text-lg font-medium ${isDark ? 'text-dark-text' : 'text-light-text'}`}>No questions found</h3>
+            <p className={`text-sm mt-2 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
               No questions match your current filters. Try adjusting your search criteria.
             </p>
           </div>
@@ -552,8 +555,8 @@ const Questions: React.FC = () => {
 
       {/* Add Question Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins">
-          <div className={`bg-darkbg rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 ${isDark ? 'border-primary/40' : 'border-gray-300'}`}>
+        <div className={`fixed inset-0 ${isDark ? 'bg-black/60' : 'bg-black/40'} backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins`}>
+          <div className={`rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 ${isDark ? 'bg-darkbg border-dark-neutral' : 'bg-light-bg border-light-neutral'}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-primary">Add New Question</h2>
               <button
@@ -567,7 +570,7 @@ const Questions: React.FC = () => {
               </button>
             </div>
             {addError && (
-              <div className="bg-red-900/40 text-red-300 p-3 rounded-md text-sm mb-4">
+              <div className={`${isDark ? 'bg-dark-error/20 text-dark-error' : 'bg-light-error/20 text-light-error'} p-3 rounded-md text-sm mb-4`}>
                 {addError}
               </div>
             )}
@@ -579,7 +582,7 @@ const Questions: React.FC = () => {
                   value={addExamId}
                   onChange={(e) => setAddExamId(e.target.value)}
                   className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary appearance-none ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                    isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
                   }`}
                   required
                 >
@@ -595,8 +598,10 @@ const Questions: React.FC = () => {
                   id="addText"
                   value={addText}
                   onChange={(e) => setAddText(e.target.value)}
-                  className={`mt-1 w-full rounded-lg border px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                  className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-darkbg border-dark-neutral text-dark-text placeholder-secondary/30'
+                      : 'bg-light-bg border-light-neutral text-light-text placeholder-secondary/20'
                   }`}
                   placeholder="Enter question text"
                   rows={3}
@@ -611,7 +616,7 @@ const Questions: React.FC = () => {
                     value={addType}
                     onChange={(e) => setAddType(e.target.value as any)}
                     className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary appearance-none ${
-                      isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                      isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
                     }`}
                   >
                     <option value="singleChoice">Single Choice</option>
@@ -630,7 +635,7 @@ const Questions: React.FC = () => {
                     value={addPoints}
                     onChange={(e) => setAddPoints(e.target.value)}
                     className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
-                      isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                      isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
                     }`}
                     required
                   />
@@ -646,7 +651,7 @@ const Questions: React.FC = () => {
                         value={opt}
                         onChange={(e) => handleOptionChange(index, e.target.value, true)}
                         className={`flex-1 rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
-                          isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                          isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
                         }`}
                         placeholder={`Option ${index + 1}`}
                         required
@@ -655,7 +660,7 @@ const Questions: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleRemoveOption(index, true)}
-                          className="text-red-400 hover:text-red-300"
+                          className={`${isDark ? 'text-dark-error hover:text-dark-error/80' : 'text-light-error hover:text-light-error/80'}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -665,7 +670,11 @@ const Questions: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleAddOption(true)}
-                    className={`px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm ${isDark ? 'bg-gray-700' : 'bg-gray-300 text-black'}`}
+                    className={`px-3 py-1 rounded text-sm transition-colors ${
+                      isDark
+                        ? 'bg-dark-neutral hover:bg-secondary/50 text-dark-text'
+                        : 'bg-light-neutral hover:bg-secondary/30 text-light-text'
+                    }`}
                   >
                     + Add Option
                   </button>
@@ -676,7 +685,7 @@ const Questions: React.FC = () => {
                         value={typeof addCorrectAnswer === 'string' ? addCorrectAnswer : addOptions[0] || ''}
                         onChange={(e) => setAddCorrectAnswer(e.target.value)}
                         className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary appearance-none ${
-                          isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                          isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
                         }`}
                         required
                       >
@@ -702,7 +711,7 @@ const Questions: React.FC = () => {
                               }}
                               className="mr-2"
                             />
-                            <label htmlFor={`add-correct-${index}`} className={`text-sm ${isDark ? 'text-white' : 'text-light-text'}`}>
+                            <label htmlFor={`add-correct-${index}`} className={`text-sm ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                               {opt || `Option ${index + 1}`}
                             </label>
                           </div>
@@ -716,7 +725,11 @@ const Questions: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-gray-700 text-white' : 'bg-gray-300 text-black'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isDark
+                      ? 'bg-dark-neutral hover:bg-secondary/50 text-dark-text'
+                      : 'bg-light-neutral hover:bg-secondary/30 text-light-text'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -725,8 +738,8 @@ const Questions: React.FC = () => {
                   disabled={loading}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center transition-all ${
                     loading
-                      ? 'bg-gray-500 cursor-not-allowed text-gray-300'
-                      : 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-white'
+                      ? 'bg-secondary/50 cursor-not-allowed text-secondary/20'
+                      : 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-darkbg'
                   }`}
                 >
                   <Save className="h-4 w-4 mr-2" />
@@ -740,8 +753,8 @@ const Questions: React.FC = () => {
 
       {/* Edit Question Modal */}
       {isEditModalOpen && selectedQuestion && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins">
-          <div className={`bg-darkbg rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 ${isDark ? 'border-primary/40' : 'border-gray-300'}`}>
+        <div className={`fixed inset-0 ${isDark ? 'bg-black/60' : 'bg-black/40'} backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins`}>
+          <div className={`rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 ${isDark ? 'bg-darkbg border-dark-neutral' : 'bg-light-bg border-light-neutral'}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-primary">Edit Question</h2>
               <button
@@ -756,7 +769,7 @@ const Questions: React.FC = () => {
               </button>
             </div>
             {editError && (
-              <div className="bg-red-900/40 text-red-300 p-3 rounded-md text-sm mb-4">
+              <div className={`${isDark ? 'bg-dark-error/20 text-dark-error' : 'bg-light-error/20 text-light-error'} p-3 rounded-md text-sm mb-4`}>
                 {editError}
               </div>
             )}
@@ -767,8 +780,10 @@ const Questions: React.FC = () => {
                   id="editText"
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
-                  className={`mt-1 w-full rounded-lg border px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                  className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-darkbg border-dark-neutral text-dark-text placeholder-secondary/30'
+                      : 'bg-light-bg border-light-neutral text-light-text placeholder-secondary/20'
                   }`}
                   placeholder="Enter question text"
                   rows={3}
@@ -783,7 +798,7 @@ const Questions: React.FC = () => {
                     value={editType}
                     onChange={(e) => setEditType(e.target.value as any)}
                     className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary appearance-none ${
-                      isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                      isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
                     }`}
                   >
                     <option value="singleChoice">Single Choice</option>
@@ -802,7 +817,7 @@ const Questions: React.FC = () => {
                     value={editPoints}
                     onChange={(e) => setEditPoints(e.target.value)}
                     className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
-                      isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                      isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
                     }`}
                     required
                   />
@@ -818,7 +833,7 @@ const Questions: React.FC = () => {
                         value={opt}
                         onChange={(e) => handleOptionChange(index, e.target.value, false)}
                         className={`flex-1 rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
-                          isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                          isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
                         }`}
                         placeholder={`Option ${index + 1}`}
                         required
@@ -827,7 +842,7 @@ const Questions: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleRemoveOption(index, false)}
-                          className="text-red-400 hover:text-red-300"
+                          className={`${isDark ? 'text-dark-error hover:text-dark-error/80' : 'text-light-error hover:text-light-error/80'}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -837,7 +852,11 @@ const Questions: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleAddOption(false)}
-                    className={`px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm ${isDark ? 'bg-gray-700' : 'bg-gray-300 text-black'}`}
+                    className={`px-3 py-1 rounded text-sm transition-colors ${
+                      isDark
+                        ? 'bg-dark-neutral hover:bg-secondary/50 text-dark-text'
+                        : 'bg-light-neutral hover:bg-secondary/30 text-light-text'
+                    }`}
                   >
                     + Add Option
                   </button>
@@ -848,7 +867,7 @@ const Questions: React.FC = () => {
                         value={typeof editCorrectAnswer === 'string' ? editCorrectAnswer : editOptions[0] || ''}
                         onChange={(e) => setEditCorrectAnswer(e.target.value)}
                         className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary appearance-none ${
-                          isDark ? 'bg-[#1f1f1f] border-secondary/40 text-white' : 'bg-light-bg border-gray-300 text-light-text'
+                          isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
                         }`}
                         required
                       >
@@ -874,7 +893,7 @@ const Questions: React.FC = () => {
                               }}
                               className="mr-2"
                             />
-                            <label htmlFor={`correct-${index}`} className={`text-sm ${isDark ? 'text-white' : 'text-light-text'}`}>
+                            <label htmlFor={`correct-${index}`} className={`text-sm ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                               {opt || `Option ${index + 1}`}
                             </label>
                           </div>
@@ -891,7 +910,11 @@ const Questions: React.FC = () => {
                     setIsEditModalOpen(false);
                     setSelectedQuestion(null);
                   }}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-gray-700 text-white' : 'bg-gray-300 text-black'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isDark
+                      ? 'bg-dark-neutral hover:bg-secondary/50 text-dark-text'
+                      : 'bg-light-neutral hover:bg-secondary/30 text-light-text'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -900,8 +923,8 @@ const Questions: React.FC = () => {
                   disabled={loading}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center transition-all ${
                     loading
-                      ? 'bg-gray-500 cursor-not-allowed text-gray-300'
-                      : 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-white'
+                      ? 'bg-secondary/50 cursor-not-allowed text-secondary/20'
+                      : 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-darkbg'
                   }`}
                 >
                   <Save className="h-4 w-4 mr-2" />
@@ -915,10 +938,10 @@ const Questions: React.FC = () => {
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && selectedQuestion && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins">
-          <div className={`bg-darkbg rounded-xl border w-full max-w-md p-6 ${isDark ? 'border-primary/40' : 'border-gray-300'}`}>
+        <div className={`fixed inset-0 ${isDark ? 'bg-black/60' : 'bg-black/40'} backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins`}>
+          <div className={`rounded-xl border w-full max-w-md p-6 ${isDark ? 'bg-darkbg border-dark-neutral' : 'bg-light-bg border-light-neutral'}`}>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-red-400">Delete Question</h2>
+              <h2 className="text-xl font-semibold text-dark-error">Delete Question</h2>
               <button
                 onClick={() => {
                   console.log('Questions: Closing Delete Question modal');
@@ -930,7 +953,7 @@ const Questions: React.FC = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-sm mb-4 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
               Are you sure you want to delete the question: <strong>{selectedQuestion.text}</strong>? This action cannot be undone.
             </p>
             <div className="mt-6 flex justify-end space-x-3">
@@ -939,15 +962,23 @@ const Questions: React.FC = () => {
                   setIsDeleteModalOpen(false);
                   setSelectedQuestion(null);
                 }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-gray-700 text-white' : 'bg-gray-300 text-black'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isDark
+                    ? 'bg-dark-neutral hover:bg-secondary/50 text-dark-text'
+                    : 'bg-light-neutral hover:bg-secondary/30 text-light-text'
+                }`}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={loading}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  loading ? 'bg-gray-500 cursor-not-allowed text-gray-300' : 'bg-red-600 hover:bg-red-700 text-white'
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  loading
+                    ? 'bg-dark-error/50 cursor-not-allowed text-dark-error/30'
+                    : isDark
+                    ? 'bg-dark-error hover:bg-dark-error/80 text-dark-text'
+                    : 'bg-light-error hover:bg-light-error/80 text-dark-text'
                 }`}
               >
                 Delete

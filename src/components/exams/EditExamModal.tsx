@@ -32,7 +32,6 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Parse the ISO date into date and time for input fields
     const examDate = new Date(exam.date);
     if (!isNaN(examDate.getTime())) {
       setDate(examDate.toISOString().split('T')[0]);
@@ -57,7 +56,6 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
     });
 
     try {
-      // Validate required fields
       if (!title || !date || !startTime || !duration || !totalQuestions || !passingScore) {
         throw new Error('All required fields must be filled');
       }
@@ -66,7 +64,6 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
       const totalQuestionsNum = parseInt(totalQuestions);
       const passingScoreNum = parseInt(passingScore);
 
-      // Validate numeric fields
       if (isNaN(durationNum) || durationNum < 10 || durationNum > 240) {
         throw new Error('Duration must be between 10 and 240 minutes');
       }
@@ -77,11 +74,9 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
         throw new Error('Passing score must be between 1 and 100');
       }
 
-      // Combine date and start time into ISO string
       const examDateTime = new Date(`${date}T${startTime}`).toISOString();
       console.log('EditExamModal: Combined exam date and time:', examDateTime);
 
-      // Update in Firestore
       const examRef = doc(db, 'exams', exam.id);
       await updateDoc(examRef, {
         title,
@@ -103,13 +98,13 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins">
+    <div className={`fixed inset-0 ${isDark ? 'bg-black/60' : 'bg-black/40'} backdrop-blur-sm flex items-center justify-center p-4 z-50 font-poppins`}>
       <div
-        className={`bg-darkbg rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto ${
-          isDark ? 'border-primary/40' : 'border-gray-300'
+        className={`rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto ${
+          isDark ? 'bg-darkbg border-primary/40' : 'bg-light-bg border-secondary/30'
         }`}
       >
-        <div className="flex justify-between items-center p-6 border-b border-primary/30">
+        <div className={`flex justify-between items-center p-6 ${isDark ? 'border-b border-primary/30' : 'border-b border-secondary/20'}`}>
           <h2 className="text-xl font-semibold font-glacial text-primary">Edit Exam</h2>
           <button
             onClick={() => {
@@ -124,7 +119,7 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
 
         <form onSubmit={handleSubmit} className={`p-6 space-y-6 ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
           {error && (
-            <div className="bg-red-900/40 text-red-300 p-3 rounded-md text-sm">
+            <div className={`${isDark ? 'bg-dark-error/20 text-dark-error' : 'bg-light-error/20 text-light-error'} p-3 rounded-md text-sm`}>
               {error}
             </div>
           )}
@@ -139,8 +134,10 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
                 console.log('EditExamModal: Title updated:', e.target.value);
                 setTitle(e.target.value);
               }}
-              className={`mt-1 w-full rounded-lg text-dark-text placeholder-gray-500 border focus:ring-2 focus:ring-primary focus:outline-none px-4 py-2 ${
-                isDark ? 'bg-[#1f1f1f] border-secondary/50' : 'bg-light-bg border-gray-300'
+              className={`mt-1 w-full rounded-lg border focus:ring-2 focus:ring-primary focus:outline-none px-4 py-2 ${
+                isDark
+                  ? 'bg-dark-secondary-bg border-secondary/50 text-dark-text placeholder-gray-500'
+                  : 'bg-light-bg border-gray-300 text-light-text placeholder-gray-400'
               }`}
               placeholder="Enter exam title"
               required
@@ -162,8 +159,10 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
                     console.log('EditExamModal: Date updated:', e.target.value);
                     setDate(e.target.value);
                   }}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                      : 'bg-light-bg border-gray-300 text-light-text'
                   }`}
                   required
                 />
@@ -184,8 +183,10 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
                     console.log('EditExamModal: StartTime updated:', e.target.value);
                     setStartTime(e.target.value);
                   }}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                      : 'bg-light-bg border-gray-300 text-light-text'
                   }`}
                   required
                 />
@@ -210,8 +211,10 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
                     console.log('EditExamModal: Duration updated:', e.target.value);
                     setDuration(e.target.value);
                   }}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                      : 'bg-light-bg border-gray-300 text-light-text'
                   }`}
                   required
                 />
@@ -234,8 +237,10 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
                     console.log('EditExamModal: TotalQuestions updated:', e.target.value);
                     setTotalQuestions(e.target.value);
                   }}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg text-dark-text focus:outline-none focus:ring-2 focus:ring-primary ${
-                    isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                    isDark
+                      ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                      : 'bg-light-bg border-gray-300 text-light-text'
                   }`}
                   required
                 />
@@ -254,8 +259,10 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
                   console.log('EditExamModal: PassingScore updated:', e.target.value);
                   setPassingScore(e.target.value);
                 }}
-                className={`mt-1 w-full rounded-lg text-dark-text border focus:ring-2 focus:ring-primary px-4 py-2 focus:outline-none ${
-                  isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+                className={`mt-1 w-full rounded-lg border focus:ring-2 focus:ring-primary px-4 py-2 focus:outline-none ${
+                  isDark
+                    ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text'
+                    : 'bg-light-bg border-gray-300 text-light-text'
                 }`}
                 required
               />
@@ -272,8 +279,10 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
                 console.log('EditExamModal: Description updated:', e.target.value);
                 setDescription(e.target.value);
               }}
-              className={`mt-1 w-full rounded-lg text-dark-text border focus:ring-2 focus:ring-primary px-4 py-2 placeholder-gray-400 focus:outline-none ${
-                isDark ? 'bg-[#1f1f1f] border-secondary/40' : 'bg-light-bg border-gray-300'
+              className={`mt-1 w-full rounded-lg border focus:ring-2 focus:ring-primary px-4 py-2 focus:outline-none ${
+                isDark
+                  ? 'bg-dark-secondary-bg border-secondary/40 text-dark-text placeholder-gray-500'
+                  : 'bg-light-bg border-gray-300 text-light-text placeholder-gray-400'
               }`}
               placeholder="Enter exam description"
             />
@@ -286,8 +295,10 @@ const EditExamModal: React.FC<EditExamModalProps> = ({ exam, onClose }) => {
                 console.log('EditExamModal: Cancel button clicked');
                 onClose();
               }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                isDark ? 'bg-[#1f1f1f] hover:bg-[#2a2a2a] text-dark-text' : 'bg-gray-200 hover:bg-gray-300 text-light-text'
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isDark
+                  ? 'bg-dark-secondary-bg hover:bg-gray-700 text-dark-text'
+                  : 'bg-light-secondary-bg hover:bg-gray-300 text-light-text'
               }`}
             >
               Cancel

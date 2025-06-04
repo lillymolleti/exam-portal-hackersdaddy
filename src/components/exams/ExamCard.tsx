@@ -16,7 +16,7 @@ interface Exam {
 interface ExamCardProps {
   exam: Exam;
   role: 'admin' | 'student';
-  onEdit?: (exam: Exam) => void; // New prop for edit callback
+  onEdit?: (exam: Exam) => void;
 }
 
 const ExamCard: React.FC<ExamCardProps> = ({ exam, role, onEdit }) => {
@@ -42,8 +42,8 @@ const ExamCard: React.FC<ExamCardProps> = ({ exam, role, onEdit }) => {
     <div
       className={`rounded-xl border p-6 font-poppins backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 ${
         isDark
-          ? 'bg-darkbg border-[#1f1f1f] hover:border-primary'
-          : 'bg-light-bg border-gray-300 hover:border-primary'
+          ? 'bg-darkbg border-dark-secondary-bg hover:border-primary/50'
+          : 'bg-light-bg border-gray-300 hover:border-primary/50'
       }`}
     >
       <div className="flex justify-between items-start">
@@ -53,7 +53,7 @@ const ExamCard: React.FC<ExamCardProps> = ({ exam, role, onEdit }) => {
             isUpcoming
               ? 'bg-primary/10 text-primary'
               : isDark
-              ? 'bg-[#2c2c2c] text-gray-400'
+              ? 'bg-dark-secondary-bg text-gray-400'
               : 'bg-gray-200 text-gray-600'
           }`}
         >
@@ -89,7 +89,9 @@ const ExamCard: React.FC<ExamCardProps> = ({ exam, role, onEdit }) => {
                 if (onEdit) onEdit(exam);
               }}
               className={`px-4 py-2 rounded-lg text-sm font-medium flex-1 text-center transition-colors ${
-                isDark ? 'bg-[#2c2c2c] hover:bg-[#3a3a3a] text-dark-text' : 'bg-gray-200 hover:bg-gray-300 text-light-text'
+                isDark
+                  ? 'bg-dark-secondary-bg hover:bg-gray-700 text-dark-text'
+                  : 'bg-light-secondary-bg hover:bg-gray-300 text-light-text'
               }`}
             >
               <Edit className="h-4 w-4 mr-1 inline" /> Edit
@@ -114,7 +116,9 @@ const ExamCard: React.FC<ExamCardProps> = ({ exam, role, onEdit }) => {
           <Link
             to={`/student/results/${exam.id}`}
             className={`block w-full px-4 py-2 rounded-lg text-sm font-medium text-center transition-colors ${
-              isDark ? 'bg-[#2c2c2c] hover:bg-[#3a3a3a] text-dark-text' : 'bg-gray-200 hover:bg-gray-300 text-light-text'
+              isDark
+                ? 'bg-dark-secondary-bg hover:bg-gray-700 text-dark-text'
+                : 'bg-light-secondary-bg hover:bg-gray-300 text-light-text'
             }`}
             onClick={() => console.log('ExamCard: Navigating to view results:', exam.id)}
           >

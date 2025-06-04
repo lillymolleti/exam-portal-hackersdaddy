@@ -6,7 +6,7 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 
 interface LayoutProps {
-  role: string; // Updated to explicitly require role (removed children since we're using Outlet)
+  role: string;
 }
 
 const Layout: React.FC<LayoutProps> = ({ role }) => {
@@ -24,7 +24,7 @@ const Layout: React.FC<LayoutProps> = ({ role }) => {
   console.log('Layout: Rendering with role:', role, 'user:', user?.name, 'isDark:', isDark, 'isSidebarOpen:', isSidebarOpen);
 
   return (
-    <div className={`flex h-screen overflow-hidden font-poppins ${isDark ? 'bg-darkbg text-white' : 'bg-light-bg text-light-text'}`}>
+    <div className={`flex h-screen overflow-hidden font-poppins ${isDark ? 'bg-darkbg text-dark-text' : 'bg-light-bg text-light-text'}`}>
       <Sidebar role={role} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header role={role} toggleSidebar={toggleSidebar} />
