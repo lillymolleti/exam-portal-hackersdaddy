@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Search, Filter, Plus, Edit, Trash2, X, Save } from 'lucide-react';
+import { Search, Filter, Plus, Edit, Trash2, X, Save, BookOpen } from 'lucide-react';
 import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 interface Question {
   id: string;
-  examId: string;
-  examTitle: string;
+  examId?: string; // Optional for question bank items (not tied to an exam)
+  examTitle?: string; // Optional for question bank items
   text: string;
   type: 'singleChoice' | 'multipleChoice' | 'essay' | 'matching' | 'ordering';
   points: number;
   options?: string[];
   correctAnswer?: string | string[];
+  topic?: string; // For question bank tagging
+  difficulty: 'easy' | 'medium' | 'hard'; // Unified for both exam and bank questions
+  source?: 'exam' | 'bank'; // To differentiate between exam-specific and bank questions
 }
 
 interface Exam {
@@ -28,8 +31,11 @@ const Questions: React.FC = () => {
   const [exams, setExams] = useState<Exam[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterExam, setFilterExam] = useState('all');
+  const [filterTopic, setFilterTopic] = useState('all');
+  const [filterDifficulty, setFilterDifficulty] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'exam' | 'bank'>('exam'); // Toggle between exam questions and question bank
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -39,6 +45,8 @@ const Questions: React.FC = () => {
   const [editPoints, setEditPoints] = useState('1');
   const [editOptions, setEditOptions] = useState<string[]>(['']);
   const [editCorrectAnswer, setEditCorrectAnswer] = useState<string | string[]>('');
+  const [editTopic, setEditTopic] = useState('');
+  const [editDifficulty, setEditDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [editError, setEditError] = useState<string | null>(null);
   const [addText, setAddText] = useState('');
   const [addType, setAddType] = useState<'singleChoice' | 'multipleChoice' | 'essay' | 'matching' | 'ordering'>('singleChoice');
@@ -46,9 +54,13 @@ const Questions: React.FC = () => {
   const [addOptions, setAddOptions] = useState<string[]>(['']);
   const [addCorrectAnswer, setAddCorrectAnswer] = useState<string | string[]>('');
   const [addExamId, setAddExamId] = useState('');
+  const [addTopic, setAddTopic] = useState('');
+  const [addDifficulty, setAddDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [addToBank, setAddToBank] = useState(false); // Toggle to add to question bank instead of exam
   const [addError, setAddError] = useState<string | null>(null);
+  const [topics, setTopics] = useState<string[]>([]); // For filtering by topic in question bank
 
-  console.log('Questions: Rendering component with user:', user?.name, 'role:', user?.role, 'isDark:', isDark);
+  console.log('Questions: Rendering component with user:', user?.name, 'role:', user?.role, 'isDark:', isDark, 'activeTab:', activeTab);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,6 +70,9 @@ const Questions: React.FC = () => {
       try {
         const questionsList: Question[] = [];
         const examsList: Exam[] = [];
+        const topicSet = new Set<string>();
+
+        // Fetch exams and exam-specific questions
         console.log('Questions: Fetching exams collection...');
         const examsSnapshot = await getDocs(collection(db, 'exams'));
         console.log('Questions: Retrieved exams count:', examsSnapshot.size);
@@ -84,16 +99,42 @@ const Questions: React.FC = () => {
                 points: questionData.points || 0,
                 options: questionData.options || [],
                 correctAnswer: questionData.correctAnswer || '',
+                difficulty: questionData.difficulty || 'medium', // Default for exam questions if not present
+                source: 'exam',
               });
             });
           } catch (subError: any) {
             console.error(`Questions: Error fetching questions for exam ${examDoc.id}:`, subError.message, 'Code:', subError.code);
           }
         }
+
+        // Fetch question bank (central repository)
+        console.log('Questions: Fetching question bank collection...');
+        const bankSnapshot = await getDocs(collection(db, 'questionBank'));
+        console.log('Questions: Retrieved question bank items count:', bankSnapshot.size);
+        bankSnapshot.forEach(doc => {
+          const bankData = doc.data();
+          console.log(`Questions: Adding bank question ID ${doc.id}`);
+          questionsList.push({
+            id: doc.id,
+            text: bankData.text || 'Untitled Question',
+            type: bankData.type || 'singleChoice',
+            points: bankData.points || 0,
+            options: bankData.options || [],
+            correctAnswer: bankData.correctAnswer || '',
+            topic: bankData.topic || '',
+            difficulty: bankData.difficulty || 'medium',
+            source: 'bank',
+          });
+          if (bankData.topic) topicSet.add(bankData.topic);
+        });
+
         setQuestions(questionsList);
         setExams(examsList);
-        console.log('Questions: Total fetched questions:', questionsList.length, 'questions:', questionsList);
+        setTopics(Array.from(topicSet));
+        console.log('Questions: Total fetched questions (exam + bank):', questionsList.length, 'questions:', questionsList);
         console.log('Questions: Total fetched exams:', examsList.length, 'exams:', examsList);
+        console.log('Questions: Extracted topics for filter:', Array.from(topicSet));
       } catch (error: any) {
         console.error('Questions: Error fetching data:', error.message, 'Code:', error.code);
         setError('Failed to load questions. Please try again.');
@@ -112,32 +153,49 @@ const Questions: React.FC = () => {
     }
   }, [user]);
 
-  const examFilterOptions = ['all', ...new Set(questions.map(q => q.examTitle))];
+  const examFilterOptions = ['all', ...new Set(questions.filter(q => q.source === 'exam').map(q => q.examTitle || 'Untitled Exam'))];
+  const topicFilterOptions = ['all', ...topics];
   console.log('Questions: Available exams for filter:', examFilterOptions);
+  console.log('Questions: Available topics for filter:', topicFilterOptions);
 
   const filteredQuestions = questions.filter(question => {
     const matchesSearch = question.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          question.examTitle.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesExam = filterExam === 'all' || question.examTitle === filterExam;
-    console.log(`Questions: Filtering question ID ${question.id}, matchesSearch: ${matchesSearch}, matchesExam: ${matchesExam}`);
-    return matchesSearch && matchesExam;
+                          (question.examTitle && question.examTitle.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          (question.topic && question.topic.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSource = (activeTab === 'exam' && question.source === 'exam') || (activeTab === 'bank' && question.source === 'bank');
+    const matchesExam = activeTab === 'exam' ? (filterExam === 'all' || (question.examTitle === filterExam)) : true;
+    const matchesTopic = activeTab === 'bank' ? (filterTopic === 'all' || (question.topic === filterTopic)) : true;
+    const matchesDifficulty = filterDifficulty === 'all' || (question.difficulty === filterDifficulty);
+    console.log(`Questions: Filtering question ID ${question.id}, source: ${question.source}, matchesSearch: ${matchesSearch}, matchesSource: ${matchesSource}, matchesExam: ${matchesExam}, matchesTopic: ${matchesTopic}, matchesDifficulty: ${matchesDifficulty}`);
+    return matchesSearch && matchesSource && matchesExam && matchesTopic && matchesDifficulty;
   });
-  console.log('Questions: Filtered questions count:', filteredQuestions.length);
+  console.log('Questions: Filtered questions count:', filteredQuestions.length, 'activeTab:', activeTab);
+
+  const handleTabChange = (tab: 'exam' | 'bank') => {
+    setActiveTab(tab);
+    setSearchTerm('');
+    setFilterExam('all');
+    setFilterTopic('all');
+    setFilterDifficulty('all');
+    console.log('Questions: Switching tab to:', tab);
+  };
 
   const handleEditQuestion = (question: Question) => {
-    console.log('Questions: Opening edit modal for question:', question.id, 'text:', question.text);
+    console.log('Questions: Opening edit modal for question:', question.id, 'text:', question.text, 'source:', question.source);
     setSelectedQuestion(question);
     setEditText(question.text);
     setEditType(question.type);
     setEditPoints(question.points.toString());
     setEditOptions(question.options || ['']);
     setEditCorrectAnswer(question.correctAnswer || '');
+    setEditTopic(question.topic || '');
+    setEditDifficulty(question.difficulty || 'medium');
     setEditError(null);
     setIsEditModalOpen(true);
   };
 
   const handleDeleteQuestion = (question: Question) => {
-    console.log('Questions: Opening delete confirmation for question:', question.id, 'text:', question.text);
+    console.log('Questions: Opening delete confirmation for question:', question.id, 'text:', question.text, 'source:', question.source);
     setSelectedQuestion(question);
     setIsDeleteModalOpen(true);
   };
@@ -145,11 +203,17 @@ const Questions: React.FC = () => {
   const confirmDelete = async () => {
     if (!selectedQuestion) return;
     setLoading(true);
-    console.log('Questions: Confirming deletion of question:', selectedQuestion.id, 'from exam:', selectedQuestion.examId);
+    console.log('Questions: Confirming deletion of question:', selectedQuestion.id, 'source:', selectedQuestion.source);
     try {
-      const questionRef = doc(db, 'exams', selectedQuestion.examId, 'questions', selectedQuestion.id);
-      await deleteDoc(questionRef);
-      console.log('Questions: Question deleted successfully:', selectedQuestion.id);
+      if (selectedQuestion.source === 'exam' && selectedQuestion.examId) {
+        const questionRef = doc(db, 'exams', selectedQuestion.examId, 'questions', selectedQuestion.id);
+        await deleteDoc(questionRef);
+        console.log('Questions: Exam-specific question deleted successfully:', selectedQuestion.id, 'examId:', selectedQuestion.examId);
+      } else if (selectedQuestion.source === 'bank') {
+        const questionRef = doc(db, 'questionBank', selectedQuestion.id);
+        await deleteDoc(questionRef);
+        console.log('Questions: Bank question deleted successfully:', selectedQuestion.id);
+      }
       setQuestions(questions.filter(q => q.id !== selectedQuestion.id));
       setIsDeleteModalOpen(false);
       setSelectedQuestion(null);
@@ -166,12 +230,14 @@ const Questions: React.FC = () => {
     if (!selectedQuestion) return;
     setLoading(true);
     setEditError(null);
-    console.log('Questions: Updating question:', selectedQuestion.id, 'with data:', {
+    console.log('Questions: Updating question:', selectedQuestion.id, 'source:', selectedQuestion.source, 'with data:', {
       text: editText,
       type: editType,
       points: parseInt(editPoints),
       options: editOptions,
       correctAnswer: editCorrectAnswer,
+      topic: editTopic,
+      difficulty: editDifficulty,
     });
 
     try {
@@ -194,23 +260,29 @@ const Questions: React.FC = () => {
         }
       }
 
-      const questionRef = doc(db, 'exams', selectedQuestion.examId, 'questions', selectedQuestion.id);
-      await updateDoc(questionRef, {
+      const updatedData = {
         text: editText,
         type: editType,
         points: pointsNum,
         options: editType === 'singleChoice' || editType === 'multipleChoice' ? editOptions : [],
         correctAnswer: editType === 'singleChoice' || editType === 'multipleChoice' ? editCorrectAnswer : '',
-      });
-      console.log('Questions: Question updated successfully:', selectedQuestion.id);
+        topic: selectedQuestion.source === 'bank' ? editTopic : '',
+        difficulty: editDifficulty, // Now saved for both exam and bank questions
+      };
+
+      if (selectedQuestion.source === 'exam' && selectedQuestion.examId) {
+        const questionRef = doc(db, 'exams', selectedQuestion.examId, 'questions', selectedQuestion.id);
+        await updateDoc(questionRef, updatedData);
+        console.log('Questions: Exam-specific question updated successfully:', selectedQuestion.id, 'examId:', selectedQuestion.examId);
+      } else if (selectedQuestion.source === 'bank') {
+        const questionRef = doc(db, 'questionBank', selectedQuestion.id);
+        await updateDoc(questionRef, updatedData);
+        console.log('Questions: Bank question updated successfully:', selectedQuestion.id);
+      }
 
       const updatedQuestion = {
         ...selectedQuestion,
-        text: editText,
-        type: editType,
-        points: pointsNum,
-        options: editType === 'singleChoice' || editType === 'multipleChoice' ? editOptions : [],
-        correctAnswer: editType === 'singleChoice' || editType === 'multipleChoice' ? editCorrectAnswer : '',
+        ...updatedData,
       };
       setQuestions(questions.map(q => (q.id === selectedQuestion.id ? updatedQuestion : q)));
       setIsEditModalOpen(false);
@@ -231,14 +303,20 @@ const Questions: React.FC = () => {
       text: addText,
       type: addType,
       points: parseInt(addPoints),
-      examId: addExamId,
+      examId: addToBank ? 'N/A (Bank)' : addExamId,
       options: addOptions,
       correctAnswer: addCorrectAnswer,
+      topic: addToBank ? addTopic : 'N/A',
+      difficulty: addDifficulty,
+      addToBank: addToBank,
     });
 
     try {
-      if (!addText || !addPoints || !addExamId) {
-        throw new Error('Question text, points, and exam selection are required.');
+      if (!addText || !addPoints) {
+        throw new Error('Question text and points are required.');
+      }
+      if (!addToBank && !addExamId) {
+        throw new Error('Exam selection is required when not adding to question bank.');
       }
       const pointsNum = parseInt(addPoints);
       if (isNaN(pointsNum) || pointsNum < 1) {
@@ -256,27 +334,51 @@ const Questions: React.FC = () => {
         }
       }
 
-      const questionsCollection = collection(db, 'exams', addExamId, 'questions');
-      const docRef = await addDoc(questionsCollection, {
+      const newQuestionData = {
         text: addText,
         type: addType,
         points: pointsNum,
         options: addType === 'singleChoice' || addType === 'multipleChoice' ? addOptions : [],
         correctAnswer: addType === 'singleChoice' || addType === 'multipleChoice' ? addCorrectAnswer : '',
-      });
-      console.log('Questions: New question added successfully with ID:', docRef.id);
-
-      const selectedExam = exams.find(exam => exam.id === addExamId);
-      const newQuestion: Question = {
-        id: docRef.id,
-        examId: addExamId,
-        examTitle: selectedExam?.title || 'Untitled Exam',
-        text: addText,
-        type: addType,
-        points: pointsNum,
-        options: addType === 'singleChoice' || addType === 'multipleChoice' ? addOptions : [],
-        correctAnswer: addType === 'singleChoice' || addType === 'multipleChoice' ? addCorrectAnswer : '',
+        topic: addToBank ? addTopic : '',
+        difficulty: addDifficulty, // Now saved for both exam and bank questions
       };
+
+      let newQuestion: Question;
+      if (addToBank) {
+        const bankCollection = collection(db, 'questionBank');
+        const docRef = await addDoc(bankCollection, newQuestionData);
+        console.log('Questions: New question added to bank successfully with ID:', docRef.id);
+        newQuestion = {
+          id: docRef.id,
+          text: addText,
+          type: addType,
+          points: pointsNum,
+          options: addType === 'singleChoice' || addType === 'multipleChoice' ? addOptions : [],
+          correctAnswer: addType === 'singleChoice' || addType === 'multipleChoice' ? addCorrectAnswer : '',
+          topic: addTopic,
+          difficulty: addDifficulty,
+          source: 'bank',
+        };
+      } else {
+        const questionsCollection = collection(db, 'exams', addExamId, 'questions');
+        const docRef = await addDoc(questionsCollection, newQuestionData);
+        console.log('Questions: New question added to exam successfully with ID:', docRef.id, 'examId:', addExamId);
+        const selectedExam = exams.find(exam => exam.id === addExamId);
+        newQuestion = {
+          id: docRef.id,
+          examId: addExamId,
+          examTitle: selectedExam?.title || 'Untitled Exam',
+          text: addText,
+          type: addType,
+          points: pointsNum,
+          options: addType === 'singleChoice' || addType === 'multipleChoice' ? addOptions : [],
+          correctAnswer: addType === 'singleChoice' || addType === 'multipleChoice' ? addCorrectAnswer : '',
+          difficulty: addDifficulty,
+          source: 'exam',
+        };
+      }
+
       setQuestions([...questions, newQuestion]);
       setIsAddModalOpen(false);
       setAddText('');
@@ -285,6 +387,9 @@ const Questions: React.FC = () => {
       setAddOptions(['']);
       setAddCorrectAnswer('');
       setAddExamId('');
+      setAddTopic('');
+      setAddDifficulty('medium');
+      setAddToBank(false);
     } catch (err: any) {
       console.error('Questions: Error adding question:', err.message, 'Code:', err.code);
       setAddError(err.message || 'Failed to add question.');
@@ -370,11 +475,30 @@ const Questions: React.FC = () => {
                         points: questionData.points,
                         options: questionData.options,
                         correctAnswer: questionData.correctAnswer,
+                        difficulty: questionData.difficulty || 'medium', // Default for existing data
+                        source: 'exam',
                       });
                     });
                   }
+                  const bankSnapshot = await getDocs(collection(db, 'questionBank'));
+                  bankSnapshot.forEach(doc => {
+                    const bankData = doc.data();
+                    questions.push({
+                      id: doc.id,
+                      text: bankData.text || 'Untitled Question',
+                      type: bankData.type || 'singleChoice',
+                      points: bankData.points || 0,
+                      options: bankData.options || [],
+                      correctAnswer: bankData.correctAnswer || '',
+                      topic: bankData.topic || '',
+                      difficulty: bankData.difficulty || 'medium',
+                      source: 'bank',
+                    });
+                  });
                   setQuestions(questions);
                   setExams(examsList);
+                  const topicSet = new Set<string>(questions.filter(q => q.source === 'bank' && q.topic).map(q => q.topic || ''));
+                  setTopics(Array.from(topicSet));
                 } catch (err: any) {
                   console.error('Questions: Retry fetch failed:', err.message);
                   setError('Failed to load questions. Please try again.');
@@ -397,41 +521,73 @@ const Questions: React.FC = () => {
     );
   }
 
-  console.log('Questions: Rendering main content, filteredQuestions count:', filteredQuestions.length);
+  console.log('Questions: Rendering main content, filteredQuestions count:', filteredQuestions.length, 'activeTab:', activeTab);
 
   return (
     <div className="space-y-6">
+      {/* Tab Navigation for Exam Questions and Question Bank */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
-          <h1 className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>Questions</h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
-            Manage questions for your exams
+          <h1 className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>Questions Management</h1>
+          <p className={`text-sm mt-1 ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
+            {activeTab === 'exam' ? 'Manage questions for your exams' : 'Manage central question bank'}
           </p>
         </div>
-        <button
-          onClick={() => {
-            console.log('Questions: Opening Add Question modal');
-            setIsAddModalOpen(true);
-          }}
-          className={`mt-4 md:mt-0 px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-all btn-glow ${
-            isDark
-              ? 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-dark-text'
-              : 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-darkbg'
-          }`}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Question
-        </button>
+        <div className="flex items-center space-x-2 mt-4 md:mt-0">
+          <button
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'exam'
+                ? isDark
+                  ? 'bg-gradient-to-r from-primary to-secondary text-dark-text'
+                  : 'bg-gradient-to-r from-primary to-secondary text-darkbg'
+                : isDark
+                ? 'bg-dark-neutral hover:bg-secondary/50 text-dark-text'
+                : 'bg-light-neutral hover:bg-secondary/30 text-light-text'
+            }`}
+            onClick={() => handleTabChange('exam')}
+          >
+            Exam Questions
+          </button>
+          <button
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'bank'
+                ? isDark
+                  ? 'bg-gradient-to-r from-primary to-secondary text-dark-text'
+                  : 'bg-gradient-to-r from-primary to-secondary text-darkbg'
+                : isDark
+                ? 'bg-dark-neutral hover:bg-secondary/50 text-dark-text'
+                : 'bg-light-neutral hover:bg-secondary/30 text-light-text'
+            }`}
+            onClick={() => handleTabChange('bank')}
+          >
+            Question Bank
+          </button>
+          <button
+            onClick={() => {
+              console.log('Questions: Opening Add Question modal', activeTab === 'bank' ? 'for bank' : 'for exam');
+              setIsAddModalOpen(true);
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-all btn-glow ${
+              isDark
+                ? 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-dark-text'
+                : 'bg-gradient-to-r from-primary to-secondary hover:from-[#4be3b0] hover:to-[#008f5f] text-darkbg'
+            }`}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Question
+          </button>
+        </div>
       </div>
 
+      {/* Filters for Exam Questions or Question Bank */}
       <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className={`h-5 w-5 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`} />
+            <Search className={`h-5 w-5 ${isDark ? 'text-dark-text' : 'text-light-text'}`} />
           </div>
           <input
             type="text"
-            placeholder="Search questions or exams..."
+            placeholder={activeTab === 'exam' ? 'Search questions or exams...' : 'Search questions or topics...'}
             value={searchTerm}
             onChange={(e) => {
               console.log('Questions: Search term updated:', e.target.value);
@@ -439,20 +595,49 @@ const Questions: React.FC = () => {
             }}
             className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
               isDark
-                ? 'bg-darkbg border-dark-neutral text-dark-text placeholder-secondary/30'
-                : 'bg-light-bg border-light-neutral text-light-text placeholder-secondary/20'
+                ? 'bg-darkbg border-dark-neutral text-dark-text placeholder-dark-text/50'
+                : 'bg-light-bg border-light-neutral text-light-text placeholder-light-text/50'
             }`}
           />
         </div>
-        <div className="relative w-full md:w-64">
+        {activeTab === 'exam' ? (
+          <div className="relative w-full md:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Filter className={`h-5 w-5 ${isDark ? 'text-dark-text' : 'text-light-text'}`} />
+            </div>
+            <select
+              value={filterExam}
+              onChange={(e) => {
+                console.log('Questions: Filter exam updated:', e.target.value);
+                setFilterExam(e.target.value);
+              }}
+              className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
+                isDark
+                  ? 'bg-darkbg border-dark-neutral text-dark-text'
+                  : 'bg-light-bg border-light-neutral text-light-text'
+              }`}
+            >
+              <option value="all">All Exams</option>
+              {examFilterOptions.filter(e => e !== 'all').map(exam => (
+                <option key={exam} value={exam}>{exam}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+              <svg className={`h-5 w-5 ${isDark ? 'text-dark-text' : 'text-light-text'}`} fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        ) : (
+          <div className="relative w-full md:w-64">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Filter className={`h-5 w-5 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`} />
+            <Filter className={`h-5 w-5 ${isDark ? 'text-dark-text' : 'text-light-text'}`} />
           </div>
           <select
-            value={filterExam}
+            value={filterTopic}
             onChange={(e) => {
-              console.log('Questions: Filter exam updated:', e.target.value);
-              setFilterExam(e.target.value);
+              console.log('Questions: Filter topic updated:', e.target.value);
+              setFilterTopic(e.target.value);
             }}
             className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
               isDark
@@ -460,13 +645,41 @@ const Questions: React.FC = () => {
                 : 'bg-light-bg border-light-neutral text-light-text'
             }`}
           >
-            <option value="all">All Exams</option>
-            {examFilterOptions.filter(e => e !== 'all').map(exam => (
-              <option key={exam} value={exam}>{exam}</option>
+            <option value="all">All Topics</option>
+            {topicFilterOptions.filter(t => t !== 'all').map(topic => (
+              <option key={topic} value={topic}>{topic}</option>
             ))}
           </select>
           <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            <svg className={`h-5 w-5 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`} fill="none" viewBox="0 0 20 20" stroke="currentColor">
+            <svg className={`h-5 w-5 ${isDark ? 'text-dark-text' : 'text-light-text'}`} fill="none" viewBox="0 0 20 20" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        )}
+        <div className="relative w-full md:w-64">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Filter className={`h-5 w-5 ${isDark ? 'text-dark-text' : 'text-light-text'}`} />
+          </div>
+          <select
+            value={filterDifficulty}
+            onChange={(e) => {
+              console.log('Questions: Filter difficulty updated:', e.target.value);
+              setFilterDifficulty(e.target.value);
+            }}
+            className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
+              isDark
+                ? 'bg-darkbg border-dark-neutral text-dark-text'
+                : 'bg-light-bg border-light-neutral text-light-text'
+            }`}
+          >
+            <option value="all">All Difficulties</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+            <svg className={`h-5 w-5 ${isDark ? 'text-dark-text' : 'text-light-text'}`} fill="none" viewBox="0 0 20 20" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -480,19 +693,29 @@ const Questions: React.FC = () => {
           <table className="min-w-full divide-y divide-secondary/20">
             <thead className={isDark ? 'bg-darkbg' : 'bg-light-bg'}>
               <tr>
-                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
+                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                   Question
                 </th>
-                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
-                  Exam
+                {activeTab === 'exam' && (
+                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
+                    Exam
+                  </th>
+                )}
+                {activeTab === 'bank' && (
+                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
+                    Topic
+                  </th>
+                )}
+                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
+                  Difficulty
                 </th>
-                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
+                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                   Type
                 </th>
-                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
+                <th scope="col" className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                   Points
                 </th>
-                <th scope="col" className={`px-6 py-3 text-right text-xs font-medium uppercase tracking-wider ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
+                <th scope="col" className={`px-6 py-3 text-right text-xs font-medium uppercase tracking-wider ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                   Actions
                 </th>
               </tr>
@@ -503,11 +726,21 @@ const Questions: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm font-medium ${isDark ? 'text-dark-text' : 'text-light-text'}`}>{question.text}</div>
                   </td>
+                  {activeTab === 'exam' && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm ${isDark ? 'text-dark-text' : 'text-light-text'}`}>{question.examTitle || 'N/A'}</div>
+                    </td>
+                  )}
+                  {activeTab === 'bank' && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm ${isDark ? 'text-dark-text' : 'text-light-text'}`}>{question.topic || 'Untitled'}</div>
+                    </td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>{question.examTitle}</div>
+                    <div className={`text-sm ${isDark ? 'text-dark-text' : 'text-light-text'}`}>{question.difficulty || 'Medium'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>{question.type}</div>
+                    <div className={`text-sm ${isDark ? 'text-dark-text' : 'text-light-text'}`}>{question.type}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm ${isDark ? 'text-dark-text' : 'text-light-text'}`}>{question.points}</div>
@@ -543,10 +776,10 @@ const Questions: React.FC = () => {
             <div className={`mx-auto h-16 w-16 rounded-full flex items-center justify-center mb-4 ${
               isDark ? 'bg-dark-neutral' : 'bg-light-neutral'
             }`}>
-              <Search className={`h-8 w-8 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`} />
+              <Search className={`h-8 w-8 ${isDark ? 'text-dark-text' : 'text-light-text'}`} />
             </div>
             <h3 className={`text-lg font-medium ${isDark ? 'text-dark-text' : 'text-light-text'}`}>No questions found</h3>
-            <p className={`text-sm mt-2 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
+            <p className={`text-sm mt-2 ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
               No questions match your current filters. Try adjusting your search criteria.
             </p>
           </div>
@@ -575,23 +808,38 @@ const Questions: React.FC = () => {
               </div>
             )}
             <form onSubmit={handleAddQuestion} className="space-y-4">
-              <div>
-                <label htmlFor="addExam" className="block text-sm font-medium text-primary">Exam</label>
-                <select
-                  id="addExam"
-                  value={addExamId}
-                  onChange={(e) => setAddExamId(e.target.value)}
-                  className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary appearance-none ${
-                    isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
-                  }`}
-                  required
-                >
-                  <option value="">Select an Exam</option>
-                  {exams.map(exam => (
-                    <option key={exam.id} value={exam.id}>{exam.title}</option>
-                  ))}
-                </select>
+              <div className="flex items-center justify-between">
+                <label htmlFor="addToBank" className="text-sm font-medium text-primary flex-1">Add to Question Bank instead of Exam</label>
+                <input
+                  type="checkbox"
+                  id="addToBank"
+                  checked={addToBank}
+                  onChange={(e) => {
+                    setAddToBank(e.target.checked);
+                    console.log('Questions: Add to bank toggled:', e.target.checked);
+                  }}
+                  className="ml-2"
+                />
               </div>
+              {!addToBank && (
+                <div>
+                  <label htmlFor="addExam" className="block text-sm font-medium text-primary">Exam</label>
+                  <select
+                    id="addExam"
+                    value={addExamId}
+                    onChange={(e) => setAddExamId(e.target.value)}
+                    className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary appearance-none ${
+                      isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
+                    }`}
+                    required={!addToBank}
+                  >
+                    <option value="">Select an Exam</option>
+                    {exams.map(exam => (
+                      <option key={exam.id} value={exam.id}>{exam.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label htmlFor="addText" className="block text-sm font-medium text-primary">Question Text</label>
                 <textarea
@@ -600,8 +848,8 @@ const Questions: React.FC = () => {
                   onChange={(e) => setAddText(e.target.value)}
                   className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
                     isDark
-                      ? 'bg-darkbg border-dark-neutral text-dark-text placeholder-secondary/30'
-                      : 'bg-light-bg border-light-neutral text-light-text placeholder-secondary/20'
+                      ? 'bg-darkbg border-dark-neutral text-dark-text placeholder-dark-text/50'
+                      : 'bg-light-bg border-light-neutral text-light-text placeholder-light-text/50'
                   }`}
                   placeholder="Enter question text"
                   rows={3}
@@ -639,6 +887,38 @@ const Questions: React.FC = () => {
                     }`}
                     required
                   />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {addToBank && (
+                  <div>
+                    <label htmlFor="addTopic" className="block text-sm font-medium text-primary">Topic</label>
+                    <input
+                      type="text"
+                      id="addTopic"
+                      value={addTopic}
+                      onChange={(e) => setAddTopic(e.target.value)}
+                      className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
+                        isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
+                      }`}
+                      placeholder="e.g., Algebra, React, History"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label htmlFor="addDifficulty" className="block text-sm font-medium text-primary">Difficulty</label>
+                  <select
+                    id="addDifficulty"
+                    value={addDifficulty}
+                    onChange={(e) => setAddDifficulty(e.target.value as any)}
+                    className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary appearance-none ${
+                      isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
+                    }`}
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
                 </div>
               </div>
               {(addType === 'singleChoice' || addType === 'multipleChoice') && (
@@ -782,8 +1062,8 @@ const Questions: React.FC = () => {
                   onChange={(e) => setEditText(e.target.value)}
                   className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
                     isDark
-                      ? 'bg-darkbg border-dark-neutral text-dark-text placeholder-secondary/30'
-                      : 'bg-light-bg border-light-neutral text-light-text placeholder-secondary/20'
+                      ? 'bg-darkbg border-dark-neutral text-dark-text placeholder-dark-text/50'
+                      : 'bg-light-bg border-light-neutral text-light-text placeholder-light-text/50'
                   }`}
                   placeholder="Enter question text"
                   rows={3}
@@ -821,6 +1101,38 @@ const Questions: React.FC = () => {
                     }`}
                     required
                   />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedQuestion.source === 'bank' && (
+                  <div>
+                    <label htmlFor="editTopic" className="block text-sm font-medium text-primary">Topic</label>
+                    <input
+                      type="text"
+                      id="editTopic"
+                      value={editTopic}
+                      onChange={(e) => setEditTopic(e.target.value)}
+                      className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${
+                        isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
+                      }`}
+                      placeholder="e.g., Algebra, React, History"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label htmlFor="editDifficulty" className="block text-sm font-medium text-primary">Difficulty</label>
+                  <select
+                    id="editDifficulty"
+                    value={editDifficulty}
+                    onChange={(e) => setEditDifficulty(e.target.value as any)}
+                    className={`mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary appearance-none ${
+                      isDark ? 'bg-darkbg border-dark-neutral text-dark-text' : 'bg-light-bg border-light-neutral text-light-text'
+                    }`}
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
                 </div>
               </div>
               {(editType === 'singleChoice' || editType === 'multipleChoice') && (
@@ -953,7 +1265,7 @@ const Questions: React.FC = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className={`text-sm mb-4 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
+            <p className={`text-sm mb-4 ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
               Are you sure you want to delete the question: <strong>{selectedQuestion.text}</strong>? This action cannot be undone.
             </p>
             <div className="mt-6 flex justify-end space-x-3">

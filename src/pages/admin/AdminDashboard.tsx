@@ -150,7 +150,7 @@ const AdminDashboard: React.FC = () => {
         <h1 className={`text-2xl font-bold font-glacial text-primary`}>
           Welcome, {user?.name || user?.email || 'Admin'}
         </h1>
-        <p className={`text-sm mt-1 ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>
+        <p className={`text-sm mt-1 ${isDark ? 'text-white/100' : 'text-white'}`}>
           Manage your exams and monitor student performance
         </p>
       </div>
@@ -163,7 +163,7 @@ const AdminDashboard: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>Total Exams</p>
+              <p className={`text-sm ${isDark ? 'text-white/100' : 'text-white/70'}`}>Total Exams</p>
               <p className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                 {stats.totalExams}
               </p>
@@ -178,7 +178,7 @@ const AdminDashboard: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>Active Students</p>
+              <p className={`text-sm ${isDark ?  'text-white/100' : 'text-white/70'}`}>Active Students</p>
               <p className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                 {stats.activeStudents}
               </p>
@@ -193,7 +193,7 @@ const AdminDashboard: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>Completed Exams</p>
+              <p className={`text-sm ${isDark ?  'text-white/100' : 'text-white/70'}`}>Completed Exams</p>
               <p className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                 {stats.completedExams}
               </p>
@@ -208,7 +208,7 @@ const AdminDashboard: React.FC = () => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm ${isDark ? 'text-secondary/30' : 'text-secondary/20'}`}>Average Score</p>
+              <p className={`text-sm ${isDark ?  'text-white/100' : 'text-white/70'}`}>Average Score</p>
               <p className={`text-2xl font-bold ${isDark ? 'text-dark-text' : 'text-light-text'}`}>
                 {stats.averageScore}%
               </p>
