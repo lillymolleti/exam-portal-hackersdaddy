@@ -33,15 +33,15 @@ const StudentDashboard: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch results
+        // Fetch results for the current student
         const resultsSnapshot = await getDocs(query(collection(db, 'results'), where('userId', '==', user?.firebaseUser.uid)));
         const resultsData = resultsSnapshot.docs.map(doc => doc.data());
         const examsTaken = resultsData.length;
         const averageScore = examsTaken > 0
-          ? Math.round(resultsData.reduce((sum, r) => sum + r.score, 0) / examsTaken)
+          ? Math.round(resultsData.reduce((sum, r) => sum + (r.score || 0), 0) / examsTaken)
           : 0;
         const successRate = examsTaken > 0
-          ? Math.round((resultsData.filter(r => r.score >= 50).length / examsTaken) * 100)
+          ? Math.round((resultsData.filter(r => (r.score || 0) >= (r.passingScore || 50)).length / examsTaken) * 100)
           : 0;
 
         // Fetch upcoming exams
@@ -63,11 +63,13 @@ const StudentDashboard: React.FC = () => {
           }
         }
 
+        examsData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Sort by date (earliest first)
         setStats({ averageScore, examsTaken, successRate });
-        setUpcomingExams(examsData.slice(0, 3)); // Show 3 upcoming exams
+        setUpcomingExams(examsData.slice(0, 3)); // Show top 3 upcoming exams
         console.log('StudentDashboard: Fetched stats:', { averageScore, examsTaken, successRate });
-      } catch (error) {
-        console.error('StudentDashboard: Error fetching data:', error);
+        console.log('StudentDashboard: Fetched upcoming exams:', examsData.length, 'showing top 3');
+      } catch (error: any) {
+        console.error('StudentDashboard: Error fetching data:', error.message, 'Code:', error.code);
       } finally {
         setLoading(false);
       }
@@ -78,68 +80,105 @@ const StudentDashboard: React.FC = () => {
   }, [user]);
 
   if (loading) {
-    return <div className={`p-6 text-center ${isDark ? 'bg-darkbg text-white' : 'bg-light-bg text-light-text'}`}>Loading dashboard...</div>;
+    return <div className={`p-6 text-center font-poppins ${isDark ? 'bg-darkbg text-dark-text' : 'bg-light-bg text-light-text'}`}>Loading dashboard...</div>;
   }
 
   return (
-    <div className={`space-y-6 ${isDark ? 'bg-darkbg text-white' : 'bg-light-bg text-light-text'}`}>
+    <div className={`space-y-6 font-poppins ${isDark ? 'bg-darkbg text-dark-text' : 'bg-light-bg text-light-text'}`}>
       <div>
-        <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-light-text'}`}>Welcome, {user?.name || user?.firebaseUser.email}</h1>
-        <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Track your progress and upcoming exams</p>
+        <h1 className="text-2xl font-bold font-glacial text-primary">
+          Welcome, {user?.name || user?.firebaseUser.email || 'Student'}
+        </h1>
+        <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          Track your progress and upcoming exams
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
-          isDark ? 'bg-darkbg/80 border-gray-700' : 'bg-light-bg/80 border-gray-300'
-        }`}>
+        <div
+          className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
+            isDark ? 'bg-darkbg/80 border-dark-neutral' : 'bg-light-bg/80 border-light-neutral'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Average Score</p>
-              <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-light-text'}`}>{stats.averageScore}%</p>
+              <p className="text-2xl font-bold text-primary">{stats.averageScore}%</p>
             </div>
-            <BarChart2 className={`h-8 w-8 ${isDark ? 'text-primary' : 'text-light-text'}`} />
+            <div
+              className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                isDark ? 'bg-primary/70' : 'bg-primary/60'
+              }`}
+            >
+              <BarChart2 className="h-6 w-6 text-darkbg" />
+            </div>
           </div>
         </div>
-        <div className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
-          isDark ? 'bg-darkbg/80 border-gray-700' : 'bg-light-bg/80 border-gray-300'
-        }`}>
+        <div
+          className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
+            isDark ? 'bg-darkbg/80 border-dark-neutral' : 'bg-light-bg/80 border-light-neutral'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Exams Taken</p>
-              <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-light-text'}`}>{stats.examsTaken}</p>
+              <p className="text-2xl font-bold text-primary">{stats.examsTaken}</p>
             </div>
-            <CheckCircle className={`h-8 w-8 ${isDark ? 'text-primary' : 'text-light-text'}`} />
+            <div
+              className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                isDark ? 'bg-primary/70' : 'bg-primary/60'
+              }`}
+            >
+              <CheckCircle className="h-6 w-6 text-darkbg" />
+            </div>
           </div>
         </div>
-        <div className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
-          isDark ? 'bg-darkbg/80 border-gray-700' : 'bg-light-bg/80 border-gray-300'
-        }`}>
+        <div
+          className={`p-6 rounded-xl border backdrop-blur-sm glass-effect ${
+            isDark ? 'bg-darkbg/80 border-dark-neutral' : 'bg-light-bg/80 border-light-neutral'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Success Rate</p>
-              <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-light-text'}`}>{stats.successRate}%</p>
+              <p className="text-2xl font-bold text-primary">{stats.successRate}%</p>
             </div>
-            <Clock className={`h-8 w-8 ${isDark ? 'text-primary' : 'text-light-text'}`} />
+            <div
+              className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                isDark ? 'bg-primary/70' : 'bg-primary/60'
+              }`}
+            >
+              <Clock className="h-6 w-6 text-darkbg" />
+            </div>
           </div>
         </div>
       </div>
 
       <div className="mt-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-light-text'}`}>Upcoming Exams</h2>
-          <a href="/exams" className={`text-sm font-medium ${isDark ? 'text-primary hover:text-[#4be3b0]' : 'text-light-text hover:text-gray-800'}`}>
+          <h2 className="text-lg font-semibold font-glacial text-primary">Upcoming Exams</h2>
+          <a
+            href="/student/exams"
+            className={`text-sm font-medium transition-colors ${
+              isDark ? 'text-primary hover:text-secondary' : 'text-primary hover:text-secondary'
+            }`}
+          >
             View All
           </a>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {upcomingExams.map(exam => (
-            <ExamCard
-              key={exam.id}
-              exam={exam}
-              role="student"
-            />
-          ))}
-        </div>
+        {upcomingExams.length === 0 ? (
+          <div className="text-center py-12">
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              No upcoming exams found. Check back later.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {upcomingExams.map(exam => (
+              <ExamCard key={exam.id} exam={exam} role="student" />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

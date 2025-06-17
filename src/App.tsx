@@ -1,4 +1,3 @@
-// src/App.tsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
@@ -10,6 +9,7 @@ import Register from './pages/Register';
 import StudentDashboard from './pages/student/StudentDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Exams from './pages/Exams';
+import TakeExam from './pages/student/TakeExam'; // Added for student exam-taking interface
 import Questions from './pages/admin/Questions';
 import ActiveStudents from './pages/ActiveStudents';
 import Results from './pages/Results';
@@ -38,7 +38,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <Routes>
-        {/* public routes */}
+        {/* Public routes */}
         <Route
           path="/login"
           element={
@@ -60,40 +60,33 @@ const App: React.FC = () => {
           }
         />
 
-        {/* student-protected routes */}
+        {/* Student-protected routes */}
         <Route path="/student" element={<ProtectedRoute role="student" />}>
           <Route element={<Layout role="student" />}>
-            <Route
-              path="dashboard"
-              element={<StudentDashboard />}
-            />
+            <Route path="dashboard" element={<StudentDashboard />} />
             <Route path="exams" element={<Exams />} />
+            <Route path="exams/:id" element={<TakeExam />} /> {/* Added route for taking exams */}
             <Route path="results" element={<Results />} />
+            <Route path="results/:id" element={<Results />} /> {/* Optional: Specific result view */}
             <Route path="history" element={<History />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
         </Route>
 
-        {/* admin-protected routes */}
+        {/* Admin-protected routes */}
         <Route path="/admin" element={<ProtectedRoute role="admin" />}>
           <Route element={<Layout role="admin" />}>
-            <Route
-              path="dashboard"
-              element={<AdminDashboard />}
-            />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="exams" element={<Exams />} />
             <Route path="questions" element={<Questions />} />
-            <Route
-              path="active-students"
-              element={<ActiveStudents />}
-            />
+            <Route path="active-students" element={<ActiveStudents />} />
             <Route path="results" element={<Results />} />
             <Route path="history" element={<History />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
         </Route>
 
-        {/* root & fallback */}
+        {/* Root & fallback */}
         <Route
           path="/"
           element={
