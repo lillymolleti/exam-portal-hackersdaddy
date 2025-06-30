@@ -15,9 +15,9 @@ const Header: React.FC<HeaderProps> = ({ role, toggleSidebar }) => {
 
   const dashboardTitle =
     role === 'admin'
-      ? 'Admin Dashboard'
+      ? ' '
       : role === 'student'
-      ? 'Student Dashboard'
+      ? ' '
       : 'Dashboard';
 
   useEffect(() => {

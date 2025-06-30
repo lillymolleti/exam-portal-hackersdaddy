@@ -67,16 +67,16 @@ const Sidebar: React.FC<SidebarProps> = ({ role, isOpen, toggleSidebar }) => {
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:static md:inset-auto`}
       >
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-center mb-8">
           <div className="flex items-center space-x-2">
             <img
               src={logo}
               alt="Vulnet Logo"
-              className="h-8 w-8 m-2 border border-primary object-contain"
+              className="h-12 w-12 m-2 border border-primary object-contain"
             />
-            <h2 className="text-xl font-bold font-glacial text-primary">
+            {/* <h2 className="text-xl font-bold font-glacial text-primary">
               ExamPortal
-            </h2>
+            </h2> */}
           </div>
           <button
             onClick={toggleSidebar}
